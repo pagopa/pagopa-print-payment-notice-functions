@@ -1,0 +1,155 @@
+name: ReportPdf
+on:
+  schedule:
+    - cron: '00 05 * * MON'
+
+  workflow_dispatch:
+    inputs:
+      environment:
+        required: true
+        type: choice
+        description: Select the Environment
+        options:
+          - dev
+          - uat
+          - prod
+        default: prod
+
+      time_range:
+        required: true
+        type: choice
+        description: Select the Time Range
+        options:
+          - daily
+          - weekly
+          - dozen
+          - monthly
+          - custom
+        default: weekly
+
+      custom_start_date:
+        required: false
+        type: number
+        description: Start date for custom range in millis
+
+      custom_end_date:
+        required: false
+        type: number
+        description: End date for custom range in millis
+
+      notify:
+        description: 'notify report results'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  id-token: write
+  contents: read
+  deployments: write
+
+
+jobs:
+  create_runner:
+    name: Create Runner
+    runs-on: ubuntu-22.04
+    environment:
+      name: ${{(github.event.inputs == null && 'prod') || inputs.environment }}
+    outputs:
+      runner_name: ${{ steps.create_github_runner.outputs.runner_name }}
+    steps:
+      - name: Create GitHub Runner
+        id: create_github_runner
+        # from https://github.com/pagopa/eng-github-actions-iac-template/tree/main/azure/github-self-hosted-runner-azure-create-action
+        uses: pagopa/eng-github-actions-iac-template/azure/github-self-hosted-runner-azure-create-action@main
+        with:
+          client_id: ${{ secrets.CLIENT_ID }}
+          tenant_id: ${{ secrets.TENANT_ID }}
+          subscription_id: ${{ secrets.SUBSCRIPTION_ID }}
+          container_app_environment_name: ${{ vars.CONTAINER_APP_ENVIRONMENT_NAME }}
+          resource_group_name: ${{ vars.CONTAINER_APP_ENVIRONMENT_RESOURCE_GROUP_NAME }} # RG of the runner
+          pat_token: ${{ secrets.BOT_TOKEN_GITHUB }}
+          # self_hosted_runner_image_tag: "v1.6.0"
+
+  report_script:
+    needs: [ create_runner ]
+    name: Report ${{(github.event.inputs == null && 'prod') || inputs.environment }}
+    runs-on: [ self-hosted, "${{ needs.create_runner.outputs.runner_name }}" ]
+    environment: ${{(github.event.inputs == null && 'prod') || inputs.environment }}
+    steps:
+
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@1f9a0c22da41e6ebfa534300ef656657ea2c6707
+
+      - name: Login
+        id: login
+        # from https://github.com/Azure/login/commits/master
+        uses: azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2
+        with:
+          client-id: ${{ secrets.CLIENT_ID }}
+          tenant-id: ${{ secrets.TENANT_ID }}
+          subscription-id: ${{ secrets.SUBSCRIPTION_ID }}
+
+      - name: Run reports
+        shell: bash
+        run: |
+
+          export RECEIPTS_COSMOS_ENDPOINT=${{ secrets.RECEIPTS_COSMOS_ENDPOINT }}
+          export RECEIPTS_COSMOS_KEY=${{ secrets.RECEIPTS_COSMOS_KEY }}
+          export RECEIPTS_COSMOS_TIMEOUT=${{ secrets.RECEIPTS_COSMOS_TIMEOUT }}
+          export BIZ_COSMOS_ENDPOINT=${{ secrets.BIZ_COSMOS_ENDPOINT }}
+          export BIZ_COSMOS_KEY=${{ secrets.BIZ_COSMOS_KEY }}
+          export BIZ_COSMOS_TIMEOUT=${{ secrets.BIZ_COSMOS_TIMEOUT }}
+          export DATE_RANGE=${{(github.event.inputs == null && 'weekly') || inputs.time_range }}
+          export CUSTOM_START_DATE=${{(github.event.inputs == null && '0') || inputs.custom_start_date }}
+          export CUSTOM_END_DATE=${{(github.event.inputs == null && '0') || inputs.custom_end_date }}
+
+          cd ./report
+          chmod +x ./run.sh
+          ./run.sh local
+
+
+      # - name: Set the value in bash
+      #   id: save-env-report
+      #   run: |
+      #     cd ./report
+      #     {
+      #       echo 'REPORT_PDF<<EOF'
+      #       cat report.md
+      #       echo EOF
+      #     } >> "$GITHUB_ENV"
+
+      # - name: Debug reports
+      #   shell: bash
+      #   run: |
+      #     echo ${{ env.REPORT_PDF }}
+
+      - name: Send notification to Slack
+        id: slack
+        if: ${{ (success() || failure()) && (github.event.inputs == null || inputs.notify)}}
+        uses: slackapi/slack-github-action@e28cf165c92ffef168d23c5c9000cffc8a25e117 #v1.24.0
+        with:
+          payload-file-path: "./report/src/report.json"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+
+  cleanup_runner:
+    name: Cleanup Runner
+    needs: [ create_runner, report_script ]
+    if: ${{ always() }}
+    runs-on: ubuntu-22.04
+    environment: ${{(github.event.inputs == null && 'uat') || inputs.environment }}
+    steps:
+      - name: Cleanup GitHub Runner
+        id: cleanup_github_runner
+        # from https://github.com/pagopa/eng-github-actions-iac-template/tree/main/azure/github-self-hosted-runner-azure-cleanup-action
+        uses: pagopa/eng-github-actions-iac-template/azure/github-self-hosted-runner-azure-cleanup-action@0ee2f58fd46d10ac7f00bce4304b98db3dbdbe9a
+        with:
+          client_id: ${{ secrets.CLIENT_ID }}
+          tenant_id: ${{ secrets.TENANT_ID }}
+          subscription_id: ${{ secrets.SUBSCRIPTION_ID }}
+          resource_group_name: ${{ vars.CONTAINER_APP_ENVIRONMENT_RESOURCE_GROUP_NAME }}
+          runner_name: ${{ needs.create_runner.outputs.runner_name }}
+          pat_token: ${{ secrets.BOT_TOKEN_GITHUB }}
