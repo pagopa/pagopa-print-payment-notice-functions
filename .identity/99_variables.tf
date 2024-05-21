@@ -1,18 +1,15 @@
 locals {
   github = {
     org        = "pagopa"
-    repository = "pagopa-receipt-pdf-generator"
+    repository = "pagopa-print-payment-notice-functions"
   }
 
-  prefix          = "pagopa"
-  domain          = "receipts"
-  location_short  = "weu"
-  product         = "${var.prefix}-${var.env_short}"
+  prefix         = "pagopa"
+  domain         = "printit"
+  location_short = "itn"
+  product        = "${var.prefix}-${var.env_short}"
 
   app_name = "github-${local.github.org}-${local.github.repository}-${var.prefix}-${local.domain}-${var.env}-aks"
-
-  pagopa_apim_name = "${local.product}-apim"
-  pagopa_apim_rg   = "${local.product}-api-rg"
 
   aks_cluster = {
     name                = "${local.product}-${local.location_short}-${var.env}-aks"
@@ -20,22 +17,9 @@ locals {
   }
 
   container_app_environment = {
-    name           = "${local.prefix}-${var.env_short}-${local.location_short}-github-runner-cae",
-    resource_group = "${local.prefix}-${var.env_short}-${local.location_short}-github-runner-rg",
+    name           = "${local.prefix}-${var.env_short}-${local.location_short}-core-tools-cae",
+    resource_group = "${local.prefix}-${var.env_short}-${local.location_short}-core-tools-rg",
   }
-
-}
-
-variable "receipt_cosmos_timeout" {
-  type = number
-  default = 20000
-  description = "millsec"
-}
-
-variable "biz_cosmos_timeout" {
-  type = number
-  default = 20000
-  description = "millsec"
 }
 
 variable "env" {
@@ -67,6 +51,6 @@ variable "github_repository_environment" {
   default = {
     protected_branches     = false
     custom_branch_policies = true
-    reviewers_teams        = ["pagopa-tech", "infrastrutture-admins"]
+    reviewers_teams        = ["pagopa-team-core"]
   }
 }

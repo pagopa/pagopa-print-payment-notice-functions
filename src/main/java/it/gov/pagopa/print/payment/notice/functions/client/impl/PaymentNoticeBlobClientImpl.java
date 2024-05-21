@@ -30,7 +30,7 @@ public class PaymentNoticeBlobClientImpl implements PaymentNoticeBlobClient {
     private final BlobServiceClient blobServiceClient;
 
     private PaymentNoticeBlobClientImpl() {
-        String connectionString = System.getenv("RECEIPTS_STORAGE_CONN_STRING");
+        String connectionString = System.getenv("BLOB_STORAGE_CONN_STRING");
         String storageAccount = System.getenv("BLOB_STORAGE_ACCOUNT_ENDPOINT");
 
         this.blobServiceClient = new BlobServiceClientBuilder()

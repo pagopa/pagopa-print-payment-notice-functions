@@ -69,7 +69,7 @@ public class ManagePaymentNoticeFolderUpdates {
             @EventHubTrigger(
                     name = "PaymentNoticeRequest",
                     eventHubName = "", // blank because the value is included in the connection string
-                    connection = "EVENTHUB_CONN_STRING",
+                    connection = "NOTICE_EVENTHUB_CONN_STRING",
                     cardinality = Cardinality.MANY)
             List<PaymentNoticeGenerationRequest> requestMsg,
             @BindingName(value = "PropertiesArray") Map<String, Object>[] properties,

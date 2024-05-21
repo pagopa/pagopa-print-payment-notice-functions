@@ -1,3 +1,8 @@
+data "azurerm_storage_account" "tf_storage_account" {
+  name                = "pagopainfraterraform${var.env}"
+  resource_group_name = "io-infra-rg"
+}
+
 data "azurerm_resource_group" "dashboards" {
   name = "dashboards"
 }
@@ -12,61 +17,41 @@ data "github_organization_teams" "all" {
   summary_only    = true
 }
 
-data "azurerm_key_vault" "key_vault_domain" {
-
-  name = "pagopa-${var.env_short}-${local.domain}-kv"
-  resource_group_name = "pagopa-${var.env_short}-${local.domain}-sec-rg"
+data "azurerm_user_assigned_identity" "identity_cd_01" {
+  name                = "${local.prefix}-${var.env_short}-${local.domain}-01-github-cd-identity"
+  resource_group_name = "${local.prefix}-${var.env_short}-identity-rg"
 }
 
 data "azurerm_key_vault" "key_vault" {
-
-  name = "pagopa-${var.env_short}-kv"
+  name                = "pagopa-${var.env_short}-kv"
   resource_group_name = "pagopa-${var.env_short}-sec-rg"
 }
 
-data "azurerm_key_vault_secret" "key_vault_sonar" {
+data "azurerm_key_vault" "domain_key_vault" {
+  name                = "pagopa-${var.env_short}-itn-${local.domain}-kv"
+  resource_group_name = "pagopa-${var.env_short}-itn-${local.domain}-sec-rg"
+}
 
-  name = "sonar-token"
+data "azurerm_resource_group" "apim_resource_group" {
+  name = "${local.product}-api-rg"
+}
+
+data "azurerm_key_vault_secret" "key_vault_sonar" {
+  name         = "sonar-token"
   key_vault_id = data.azurerm_key_vault.key_vault.id
 }
 
 data "azurerm_key_vault_secret" "key_vault_bot_token" {
-
-  name = "bot-token-github"
+  name         = "bot-token-github"
   key_vault_id = data.azurerm_key_vault.key_vault.id
 }
 
 data "azurerm_key_vault_secret" "key_vault_cucumber_token" {
-
-  name = "cucumber-token"
+  name         = "cucumber-token"
   key_vault_id = data.azurerm_key_vault.key_vault.id
 }
 
-data "azurerm_storage_account" "receipts_sa" {
-  name                = "pagopa${var.env_short}${local.location_short}receiptsfnsa"
-  resource_group_name = "pagopa-${var.env_short}-${local.location_short}-receipts-st-rg"
-}
-
-data "azurerm_cosmosdb_account" "receipts_cosmos" {
-  name                = "pagopa-${var.env_short}-${local.location_short}-receipts-ds-cosmos-account"
-  resource_group_name = "pagopa-${var.env_short}-${local.location_short}-receipts-rg"
-}
-data "azurerm_cosmosdb_account" "biz_cosmos" {
-  name                = "pagopa-${var.env_short}-${local.location_short}-bizevents-ds-cosmos-account"
-  resource_group_name = "pagopa-${var.env_short}-${local.location_short}-bizevents-rg"
-}
-
-data "azurerm_key_vault_secret" "key_vault_integration_test_webhook_slack" {
-  name         = "webhook-slack"
-  key_vault_id = data.azurerm_key_vault.key_vault_domain.id
-}
-
-data "azurerm_key_vault_secret" "key_vault_integration_test_aes_salt" {
-  name         = "aes-salt"
-  key_vault_id = data.azurerm_key_vault.key_vault_domain.id
-}
-
-data "azurerm_key_vault_secret" "key_vault_integration_test_aes_key" {
-  name         = "aes-secret-key"
-  key_vault_id = data.azurerm_key_vault.key_vault_domain.id
+data "azurerm_key_vault_secret" "key_vault_integration_test_subkey" {
+  name         = "integration-test-subkey"
+  key_vault_id = data.azurerm_key_vault.key_vault.id
 }

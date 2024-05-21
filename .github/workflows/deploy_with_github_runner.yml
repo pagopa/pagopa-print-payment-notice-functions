@@ -13,8 +13,8 @@ on:
         type: string
 
 env:
-  NAMESPACE: receipts
-  APP_NAME: pagopapagopareceiptpdfgenerator
+  NAMESPACE: printit
+  APP_NAME: pagopa_print_payment_notice_functions
 
 permissions:
   id-token: write
