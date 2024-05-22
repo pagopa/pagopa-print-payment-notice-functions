@@ -4,10 +4,11 @@ import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
-import com.azure.storage.blob.models.BlobItem;
 import com.azure.storage.blob.models.ListBlobsOptions;
+import com.microsoft.azure.functions.HttpStatus;
 import it.gov.pagopa.print.payment.notice.functions.client.PaymentNoticeBlobClient;
 import it.gov.pagopa.print.payment.notice.functions.model.response.BlobStorageResponse;
+import lombok.SneakyThrows;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -19,7 +20,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 /**
- * Client for the Blob Storage
+ * Client for the Blob Storage regarding notices
  */
 public class PaymentNoticeBlobClientImpl implements PaymentNoticeBlobClient {
 
@@ -51,6 +52,13 @@ public class PaymentNoticeBlobClientImpl implements PaymentNoticeBlobClient {
         return instance;
     }
 
+    /**
+     * Using the provided id it will attempt to recover the folder data,
+     * compressing
+     * @param folderId
+     * @return
+     */
+    @SneakyThrows
     public BlobStorageResponse compressFolder(String folderId) {
 
         BlobContainerClient blobContainerClient = blobServiceClient.getBlobContainerClient(containerName);
@@ -65,10 +73,12 @@ public class PaymentNoticeBlobClientImpl implements PaymentNoticeBlobClient {
                     .setPrefix(folderId);
 
 
-            for (BlobItem blobItem :  blobContainerClient.listBlobsByHierarchy(delimiter, options, null)) {
+            blobContainerClient.listBlobsByHierarchy(delimiter, options, null)
+                    .stream().forEach(blobItem -> {
                 final BlobClient blobClient = blobContainerClient.getBlobClient(blobItem.getName());
 
-                final String finalSingleFileName = blobItem.getName().split(delimiter)[1];
+                final String[] splitName = blobItem.getName().split(delimiter,2);
+                final String finalSingleFileName = splitName.length > 1 ? splitName[1] : splitName[0];
                 final String finalSingleFilepath = blobItem.getName();
 
                 CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
@@ -87,7 +97,7 @@ public class PaymentNoticeBlobClientImpl implements PaymentNoticeBlobClient {
                 });
 
                 futures.add(future);
-            }
+            });
 
             CompletableFuture<Void> allOf = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
             allOf.join();
@@ -101,7 +111,7 @@ public class PaymentNoticeBlobClientImpl implements PaymentNoticeBlobClient {
                 outputStream.toByteArray()), outputStream.size(), true);
 
         BlobStorageResponse blobStorageResponse = new BlobStorageResponse();
-        blobStorageResponse.setStatusCode(200);
+        blobStorageResponse.setStatusCode(HttpStatus.OK.value());
         return blobStorageResponse;
     }
 }

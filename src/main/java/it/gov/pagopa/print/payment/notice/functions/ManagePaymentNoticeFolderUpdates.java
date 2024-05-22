@@ -1,43 +1,18 @@
 package it.gov.pagopa.print.payment.notice.functions;
 
 import com.microsoft.azure.functions.ExecutionContext;
-import com.microsoft.azure.functions.annotation.BindingName;
-import com.microsoft.azure.functions.annotation.Cardinality;
-import com.microsoft.azure.functions.annotation.EventHubTrigger;
-import com.microsoft.azure.functions.annotation.FunctionName;
-import com.mongodb.client.*;
-import com.mongodb.client.internal.MongoClientImpl;
-import com.mongodb.client.model.Aggregates;
-import com.mongodb.client.model.Filters;
-import com.mongodb.client.model.Updates;
-import com.mongodb.client.model.changestream.ChangeStreamDocument;
-import com.mongodb.client.model.changestream.FullDocument;
+import com.microsoft.azure.functions.annotation.*;
+import it.gov.pagopa.print.payment.notice.functions.entity.PaymentGenerationRequestStatus;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentNoticeGenerationRequest;
+import it.gov.pagopa.print.payment.notice.functions.entity.PaymentNoticeGenerationRequestError;
 import it.gov.pagopa.print.payment.notice.functions.service.NoticeFolderService;
 import it.gov.pagopa.print.payment.notice.functions.service.impl.NoticeFolderServiceImpl;
-import org.apache.commons.io.FileUtils;
-import org.bson.BsonDocument;
-import org.bson.Document;
-import org.bson.conversions.Bson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.FileAlreadyExistsException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
-
-import static com.mongodb.client.model.Projections.fields;
-import static com.mongodb.client.model.Projections.include;
-import static java.util.Arrays.asList;
 
 /**
  * Azure Functions with Azure Queue trigger.
@@ -45,10 +20,6 @@ import static java.util.Arrays.asList;
 public class ManagePaymentNoticeFolderUpdates {
 
     private final Logger logger = LoggerFactory.getLogger(ManagePaymentNoticeFolderUpdates.class);
-
-    private static final String WORKING_DIRECTORY_PATH = System.getenv().getOrDefault("WORKING_DIRECTORY_PATH", "");
-
-    private static final String PATTERN_FORMAT = "yyyy.MM.dd.HH.mm.ss";
 
     private final NoticeFolderService noticeFolderService;
 
@@ -63,6 +34,17 @@ public class ManagePaymentNoticeFolderUpdates {
     /**
      * This function will be invoked when a Queue trigger occurs
      *
+     * The function handles requests coming through the provided EH channel,
+     * whenever a request is sent in status 'COMPLETING' it will check if the
+     * number of elements are considered to be processed
+     *
+     * The function will attempt to retrieve the folder notices, compressing and
+     * saving on the folder within the blob storage
+     *
+     * If the folder is successfully compressed the status will be saved
+     * as PROCESSED, or PROCESSED_WITH_FAILURES if the folder is a partial
+     *
+     * In case of errors a new element will be sent on the error channel
      */
     @FunctionName("ManagePaymentNoticeFolderUpdatesProcess")
     public void processGenerateReceipt(
@@ -73,19 +55,30 @@ public class ManagePaymentNoticeFolderUpdates {
                     cardinality = Cardinality.MANY)
             List<PaymentNoticeGenerationRequest> requestMsg,
             @BindingName(value = "PropertiesArray") Map<String, Object>[] properties,
-            final ExecutionContext context) throws IOException {
+            @EventHubOutput(
+                    name = "PaymentNoticeErrors",
+                    eventHubName = "", // blank because the value is included in the connection string
+                    connection = "NOTICE_ERR_EVENTHUB_CONN_STRING")
+            List<PaymentNoticeGenerationRequestError> errors,
+            final ExecutionContext context) {
 
         requestMsg.stream().filter(item -> (
                 Objects.equals(
                         item.getNumberOfElementsProcessed() + item.getNumberOfElementsFailed(),
-                        item.getNumberOfElementsTotal()))
+                        item.getNumberOfElementsTotal()) &&
+                        PaymentGenerationRequestStatus.COMPLETING.equals(item.getStatus()))
                 )
                 .forEach(item -> {
                     try {
                         noticeFolderService.manageFolder(item);
                     } catch (Exception e) {
-                        logger.error(e.getMessage(), e);
-
+                        logger.error("[{}] error managing notice rewuest with id {}",
+                                context.getFunctionName(), item.getId(), e);
+                        errors.add(PaymentNoticeGenerationRequestError.builder()
+                                        .folderId(item.getId())
+                                        .numberOfAttempts(0)
+                                        .compressionError(true)
+                                .build());
                     }
                 });
 

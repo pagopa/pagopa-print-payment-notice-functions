@@ -41,7 +41,8 @@ public class NoticeFolderServiceImpl implements NoticeFolderService {
             BlobStorageResponse response = paymentNoticeBlobClient
                     .compressFolder(paymentNoticeGenerationRequest.getId());
             if (response.getStatusCode() != 200) {
-                throw new SaveNoticeToBlobException("Couldn't create the compressed file", response.getStatusCode());
+                throw new SaveNoticeToBlobException("Couldn't create the compressed file",
+                        response.getStatusCode());
             }
         } catch (SaveNoticeToBlobException e) {
             logger.error(e.getMessage(), e);
@@ -50,8 +51,10 @@ public class NoticeFolderServiceImpl implements NoticeFolderService {
 
         try {
             paymentNoticeGenerationRequest.setStatus(PaymentGenerationRequestStatus.PROCESSED);
-            paymentNoticeGenerationRequestClient.updatePaymentGenerationRequest(paymentNoticeGenerationRequest);
+            paymentNoticeGenerationRequestClient
+                    .updatePaymentGenerationRequest(paymentNoticeGenerationRequest);
         } catch (Exception e) {
+            logger.error(e.getMessage(), e);
             throw e;
         }
 

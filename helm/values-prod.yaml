@@ -73,13 +73,16 @@ microservice-chart:
     OTEL_METRICS_EXPORTER: otlp
     OTEL_LOGS_EXPORTER: none
     OTEL_TRACES_SAMPLER: "always_on"
+    NOTICE_REQUEST_MONGO_DB_NAME: "noticesMongoDb"
+    NOTICE_REQUEST_MONGO_COLLECTION_NAME: "payment_notice_generation_request"
     BLOB_STORAGE_CONTAINER_NAME: "notices"
     BLOB_STORAGE_ACCOUNT_ENDPOINT: "https://pagopaprintitnotices.blob.core.windows.net"
   envSecret:
     # required
     APPLICATIONINSIGHTS_CONNECTION_STRING: 'app-insight-connection-string'
     OTEL_EXPORTER_OTLP_HEADERS: 'elastic-apm-secret-token'
-    NOTICE_EVENTHUB_CONN_STRING: 'ehub-p-notice-connection-string'
+    NOTICE_EVENTHUB_CONN_STRING: 'ehub-p-notice-complete-connection-string'
+    NOTICE_ERR_EVENTHUB_CONN_STRING: 'ehub-p-notice-error-connection-string'
     NOTICE_REQUEST_MONGODB_CONN_STRING: 'notices-mongo-connection-string'
     NOTICE_STORAGE_CONN_STRING: 'notices-storage-account-connection-string'
     AES_SECRET_KEY: 'aes-key'
