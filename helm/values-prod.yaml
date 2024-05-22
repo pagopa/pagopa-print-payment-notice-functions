@@ -82,7 +82,7 @@ microservice-chart:
     APPLICATIONINSIGHTS_CONNECTION_STRING: 'app-insight-connection-string'
     OTEL_EXPORTER_OTLP_HEADERS: 'elastic-apm-secret-token'
     NOTICE_EVENTHUB_CONN_STRING: 'ehub-p-notice-complete-connection-string'
-    NOTICE_ERR_EVENTHUB_CONN_STRING: 'ehub-p-notice-error-connection-string'
+    NOTICE_ERR_EVENTHUB_CONN_STRING: 'ehub-p-notice-errors-connection-string'
     NOTICE_REQUEST_MONGODB_CONN_STRING: 'notices-mongo-connection-string'
     NOTICE_STORAGE_CONN_STRING: 'notices-storage-account-connection-string'
     AES_SECRET_KEY: 'aes-key'
