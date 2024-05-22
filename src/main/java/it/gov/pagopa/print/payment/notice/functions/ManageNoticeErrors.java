@@ -78,8 +78,9 @@ public class ManageNoticeErrors {
 
         errorList.forEach(error -> {
 
+            PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError = null;
             try {
-                PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError =
+                paymentNoticeGenerationRequestError =
                         paymentNoticeGenerationRequestErrorClient.findOne(error.getFolderId()).orElseThrow(() ->
                                 new PaymentNoticeManagementException("Request error not found",
                                         HttpStatus.INTERNAL_SERVER_ERROR.value()));
@@ -87,7 +88,8 @@ public class ManageNoticeErrors {
                 logger.error(e.getMessage(), e);
             }
 
-            if (error.getNumberOfAttempts() < maxRetriesOnErrors) {
+            if (paymentNoticeGenerationRequestError != null &&
+                    error.getNumberOfAttempts() < maxRetriesOnErrors) {
 
                 if (error.isCompressionError()) {
                     try {
@@ -110,10 +112,12 @@ public class ManageNoticeErrors {
                     } catch (Aes256Exception | JsonProcessingException e) {
                         throw new RuntimeException(e);
                     }
+
                 }
 
                 try {
-                    paymentNoticeGenerationRequestErrorClient.updatePaymentGenerationRequest(error);
+                    paymentNoticeGenerationRequestErrorClient.updatePaymentGenerationRequest(
+                            paymentNoticeGenerationRequestError);
                 } catch (Exception e) {
                     logger.error(e.getMessage(), e);
                 }
