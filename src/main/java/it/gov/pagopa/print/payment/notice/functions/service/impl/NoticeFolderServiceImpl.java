@@ -1,12 +1,14 @@
 package it.gov.pagopa.print.payment.notice.functions.service.impl;
 
 import com.azure.storage.blob.models.BlobStorageException;
+import com.microsoft.azure.functions.HttpStatus;
 import it.gov.pagopa.print.payment.notice.functions.client.PaymentNoticeBlobClient;
 import it.gov.pagopa.print.payment.notice.functions.client.PaymentNoticeGenerationRequestClient;
 import it.gov.pagopa.print.payment.notice.functions.client.impl.PaymentNoticeBlobClientImpl;
 import it.gov.pagopa.print.payment.notice.functions.client.impl.PaymentNoticeGenerationRequestClientImpl;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentGenerationRequestStatus;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentNoticeGenerationRequest;
+import it.gov.pagopa.print.payment.notice.functions.exception.RequestRecoveryException;
 import it.gov.pagopa.print.payment.notice.functions.exception.SaveNoticeToBlobException;
 import it.gov.pagopa.print.payment.notice.functions.model.response.BlobStorageResponse;
 import it.gov.pagopa.print.payment.notice.functions.service.NoticeFolderService;
@@ -40,7 +42,7 @@ public class NoticeFolderServiceImpl implements NoticeFolderService {
         try {
             BlobStorageResponse response = paymentNoticeBlobClient
                     .compressFolder(paymentNoticeGenerationRequest.getId());
-            if (response.getStatusCode() != 200) {
+            if (response.getStatusCode() != HttpStatus.OK.value()) {
                 throw new SaveNoticeToBlobException("Couldn't create the compressed file",
                         response.getStatusCode());
             }
@@ -58,6 +60,17 @@ public class NoticeFolderServiceImpl implements NoticeFolderService {
             throw e;
         }
 
+    }
+
+    @Override
+    public PaymentNoticeGenerationRequest findRequest(String id) throws RequestRecoveryException {
+        try {
+            return paymentNoticeGenerationRequestClient.findById(id).orElseThrow(
+                    () -> new RuntimeException("Error on folder recovery"));
+        } catch (Exception e) {
+            logger.error(e.getMessage(), e);
+            throw new RequestRecoveryException(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR.value());
+        }
     }
 
 }

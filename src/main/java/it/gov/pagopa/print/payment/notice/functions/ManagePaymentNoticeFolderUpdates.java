@@ -49,9 +49,9 @@ public class ManagePaymentNoticeFolderUpdates {
     @FunctionName("ManagePaymentNoticeFolderUpdatesProcess")
     public void processGenerateReceipt(
             @EventHubTrigger(
-                    name = "PaymentNoticeRequest",
+                    name = "PaymentNoticeComplete",
                     eventHubName = "", // blank because the value is included in the connection string
-                    connection = "NOTICE_EVENTHUB_CONN_STRING",
+                    connection = "NOTICE_COMPLETE_EVENTHUB_CONN_STRING",
                     cardinality = Cardinality.MANY)
             List<PaymentNoticeGenerationRequest> requestMsg,
             @BindingName(value = "PropertiesArray") Map<String, Object>[] properties,
@@ -63,16 +63,17 @@ public class ManagePaymentNoticeFolderUpdates {
             final ExecutionContext context) {
 
         requestMsg.stream().filter(item -> (
+
                 Objects.equals(
                         item.getNumberOfElementsProcessed() + item.getNumberOfElementsFailed(),
                         item.getNumberOfElementsTotal()) &&
                         PaymentGenerationRequestStatus.COMPLETING.equals(item.getStatus()))
-                )
-                .forEach(item -> {
+                ).forEach(item -> {
+
                     try {
                         noticeFolderService.manageFolder(item);
                     } catch (Exception e) {
-                        logger.error("[{}] error managing notice rewuest with id {}",
+                        logger.error("[{}] error managing notice request with id {}",
                                 context.getFunctionName(), item.getId(), e);
                         errors.add(PaymentNoticeGenerationRequestError.builder()
                                         .folderId(item.getId())
@@ -80,6 +81,7 @@ public class ManagePaymentNoticeFolderUpdates {
                                         .compressionError(true)
                                 .build());
                     }
+
                 });
 
     }
