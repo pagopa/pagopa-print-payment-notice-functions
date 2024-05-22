@@ -3,11 +3,15 @@ package it.gov.pagopa.print.payment.notice.functions;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.microsoft.azure.functions.ExecutionContext;
+import com.microsoft.azure.functions.HttpStatus;
 import com.microsoft.azure.functions.annotation.*;
+import it.gov.pagopa.print.payment.notice.functions.client.PaymentNoticeGenerationRequestErrorClient;
+import it.gov.pagopa.print.payment.notice.functions.client.impl.PaymentNoticeGenerationRequestErrorClientImpl;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentGenerationRequestStatus;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentNoticeGenerationRequest;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentNoticeGenerationRequestError;
 import it.gov.pagopa.print.payment.notice.functions.exception.Aes256Exception;
+import it.gov.pagopa.print.payment.notice.functions.exception.PaymentNoticeManagementException;
 import it.gov.pagopa.print.payment.notice.functions.exception.RequestRecoveryException;
 import it.gov.pagopa.print.payment.notice.functions.model.notice.NoticeRequestEH;
 import it.gov.pagopa.print.payment.notice.functions.service.NoticeFolderService;
@@ -28,17 +32,24 @@ public class ManageNoticeErrors {
     private final Logger logger = LoggerFactory.getLogger(ManageNoticeErrors.class);
 
     private final NoticeFolderService noticeFolderService;
+
+    private final PaymentNoticeGenerationRequestErrorClient paymentNoticeGenerationRequestErrorClient;
+
     private final Integer maxRetriesOnErrors;
 
     public ManageNoticeErrors() {
         this.noticeFolderService = new NoticeFolderServiceImpl();
         this.maxRetriesOnErrors =  Integer.parseInt(System.getenv("MAX_RETRIES_ON_ERRORS"));
+        this.paymentNoticeGenerationRequestErrorClient = PaymentNoticeGenerationRequestErrorClientImpl.getInstance();
 
     }
 
-    ManageNoticeErrors(NoticeFolderService noticeFolderService, Integer maxRetriesOnErrors) {
+    ManageNoticeErrors(NoticeFolderService noticeFolderService,
+                       Integer maxRetriesOnErrors,
+                       PaymentNoticeGenerationRequestErrorClient paymentNoticeGenerationRequestErrorClient) {
         this.noticeFolderService = noticeFolderService;
         this.maxRetriesOnErrors = maxRetriesOnErrors;
+        this.paymentNoticeGenerationRequestErrorClient = paymentNoticeGenerationRequestErrorClient;
     }
 
     /**
@@ -67,8 +78,18 @@ public class ManageNoticeErrors {
 
         errorList.forEach(error -> {
 
+            try {
+                PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError =
+                        paymentNoticeGenerationRequestErrorClient.findOne(error.getFolderId()).orElseThrow(() ->
+                                new PaymentNoticeManagementException("Request error not found",
+                                        HttpStatus.INTERNAL_SERVER_ERROR.value()));
+            } catch (Exception e) {
+                logger.error(e.getMessage(), e);
+            }
+
             if (error.getNumberOfAttempts() < maxRetriesOnErrors) {
-                if (error.getData() == null) {
+
+                if (error.isCompressionError()) {
                     try {
                         PaymentNoticeGenerationRequest paymentNoticeGenerationRequest =
                                 noticeFolderService.findRequest(error.getId());
@@ -80,6 +101,7 @@ public class ManageNoticeErrors {
                         logger.error(e.getMessage(), e);
                     }
                 } else {
+
                     try {
                         String plainRequestData = Aes256Utils.decrypt(error.getData());
                         NoticeRequestEH noticeRequestEH =
@@ -89,6 +111,13 @@ public class ManageNoticeErrors {
                         throw new RuntimeException(e);
                     }
                 }
+
+                try {
+                    paymentNoticeGenerationRequestErrorClient.updatePaymentGenerationRequest(error);
+                } catch (Exception e) {
+                    logger.error(e.getMessage(), e);
+                }
+
             }
 
         });

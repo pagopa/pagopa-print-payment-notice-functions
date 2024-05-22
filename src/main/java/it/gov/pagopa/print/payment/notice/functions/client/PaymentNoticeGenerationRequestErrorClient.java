@@ -5,9 +5,10 @@ import it.gov.pagopa.print.payment.notice.functions.entity.PaymentNoticeGenerati
 
 import java.util.Optional;
 
-public interface PaymentNoticeGenerationRequestClient {
-    Optional<PaymentNoticeGenerationRequest> findById(String folderId);
+public interface PaymentNoticeGenerationRequestErrorClient {
 
-    void updatePaymentGenerationRequest(PaymentNoticeGenerationRequest paymentNoticeGenerationRequest);
+    void updatePaymentGenerationRequest(PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError);
+
+    Optional<PaymentNoticeGenerationRequestError> findOne(String folderId);
 
 }
