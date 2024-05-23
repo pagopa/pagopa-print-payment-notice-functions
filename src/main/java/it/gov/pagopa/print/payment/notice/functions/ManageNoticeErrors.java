@@ -75,7 +75,7 @@ public class ManageNoticeErrors {
             @EventHubOutput(
                     name = "PaymentNoticeRequest",
                     eventHubName = "", // blank because the value is included in the connection string
-                    connection = "NOTICE_ERR_EVENTHUB_CONN_STRING")
+                    connection = "NOTICE_EVENTHUB_CONN_STRING")
             List<NoticeRequestEH> noticesToRetry,
             @EventHubOutput(
                     name = "PaymentNoticeRequest",
