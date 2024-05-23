@@ -1,11 +1,12 @@
 package it.gov.pagopa.print.payment.notice.functions.service.impl;
 
-import com.azure.storage.blob.models.BlobStorageException;
 import com.microsoft.azure.functions.HttpStatus;
 import it.gov.pagopa.print.payment.notice.functions.client.PaymentNoticeBlobClient;
 import it.gov.pagopa.print.payment.notice.functions.client.PaymentNoticeGenerationRequestClient;
+import it.gov.pagopa.print.payment.notice.functions.client.PaymentNoticeGenerationRequestErrorClient;
 import it.gov.pagopa.print.payment.notice.functions.client.impl.PaymentNoticeBlobClientImpl;
 import it.gov.pagopa.print.payment.notice.functions.client.impl.PaymentNoticeGenerationRequestClientImpl;
+import it.gov.pagopa.print.payment.notice.functions.client.impl.PaymentNoticeGenerationRequestErrorClientImpl;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentGenerationRequestStatus;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentNoticeGenerationRequest;
 import it.gov.pagopa.print.payment.notice.functions.exception.RequestRecoveryException;
@@ -24,15 +25,20 @@ public class NoticeFolderServiceImpl implements NoticeFolderService {
 
     private final PaymentNoticeGenerationRequestClient paymentNoticeGenerationRequestClient;
 
+    private final PaymentNoticeGenerationRequestErrorClient paymentNoticeGenerationRequestErrorClient;
+
+
     public NoticeFolderServiceImpl() {
         paymentNoticeBlobClient = PaymentNoticeBlobClientImpl.getInstance();
         paymentNoticeGenerationRequestClient = PaymentNoticeGenerationRequestClientImpl.getInstance();
+        paymentNoticeGenerationRequestErrorClient = PaymentNoticeGenerationRequestErrorClientImpl.getInstance();
     }
 
     public NoticeFolderServiceImpl(PaymentNoticeBlobClient paymentNoticeBlobClient,
-                                   PaymentNoticeGenerationRequestClient paymentNoticeGenerationRequestClient) {
+                                   PaymentNoticeGenerationRequestClient paymentNoticeGenerationRequestClient, PaymentNoticeGenerationRequestErrorClient paymentNoticeGenerationRequestErrorClient) {
         this.paymentNoticeBlobClient = paymentNoticeBlobClient;
         this.paymentNoticeGenerationRequestClient = paymentNoticeGenerationRequestClient;
+        this.paymentNoticeGenerationRequestErrorClient = paymentNoticeGenerationRequestErrorClient;
     }
 
     @Override
@@ -55,10 +61,13 @@ public class NoticeFolderServiceImpl implements NoticeFolderService {
             paymentNoticeGenerationRequest.setStatus(PaymentGenerationRequestStatus.PROCESSED);
             paymentNoticeGenerationRequestClient
                     .updatePaymentGenerationRequest(paymentNoticeGenerationRequest);
+            paymentNoticeGenerationRequestErrorClient.deleteRequestError(paymentNoticeGenerationRequest.getId());
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
             throw e;
         }
+
+
 
     }
 

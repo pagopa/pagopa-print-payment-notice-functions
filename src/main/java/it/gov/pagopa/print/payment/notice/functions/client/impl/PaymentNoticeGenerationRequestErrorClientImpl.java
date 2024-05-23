@@ -64,4 +64,9 @@ public class PaymentNoticeGenerationRequestErrorClientImpl implements PaymentNot
         return Optional.ofNullable(mongoCollection.find(Filters.eq("folderId", folderId)).first());
     }
 
+    @Override
+    public void deleteRequestError(String id) {
+        mongoCollection.deleteOne(Filters.eq("folderId", id));
+    }
+
 }

@@ -30,7 +30,7 @@ public class NoticeFolderServiceImplTest  {
     @BeforeEach
     void init() {
         Mockito.reset(paymentNoticeBlobClient, paymentNoticeGenerationRequestClient);
-        noticeFolderService = new NoticeFolderServiceImpl(paymentNoticeBlobClient, paymentNoticeGenerationRequestClient);
+        noticeFolderService = new NoticeFolderServiceImpl(paymentNoticeBlobClient, paymentNoticeGenerationRequestClient, paymentNoticeGenerationRequestErrorClient);
     }
 
     @Test

@@ -14,6 +14,5 @@ public class InstallmentData {
     private String code;
     private Long amount;
     private String dueDate;
-    private String posteDocumentType;
 
 }

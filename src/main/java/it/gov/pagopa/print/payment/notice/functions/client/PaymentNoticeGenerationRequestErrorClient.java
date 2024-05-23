@@ -11,4 +11,5 @@ public interface PaymentNoticeGenerationRequestErrorClient {
 
     Optional<PaymentNoticeGenerationRequestError> findOne(String folderId);
 
+    void deleteRequestError(String id);
 }

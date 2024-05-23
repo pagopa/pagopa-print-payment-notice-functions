@@ -21,8 +21,6 @@ public class Notice {
 
     private String code;
 
-    private String posteDocumentType;
-
     private List<InstallmentData> installments;
 
 }
