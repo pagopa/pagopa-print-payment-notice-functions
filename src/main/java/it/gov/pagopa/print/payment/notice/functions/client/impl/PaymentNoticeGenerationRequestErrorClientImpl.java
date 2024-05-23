@@ -53,7 +53,7 @@ public class PaymentNoticeGenerationRequestErrorClientImpl implements PaymentNot
     }
 
     @Override
-    public void updatePaymentGenerationRequest(
+    public void updatePaymentGenerationRequestError(
             PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError) {
         mongoCollection.updateOne(Filters.eq("_id", paymentNoticeGenerationRequestError.getId()),
                 Updates.inc("numberOfAttempts", 1));

@@ -85,7 +85,8 @@ public class ManageNoticeErrors {
                                 new PaymentNoticeManagementException("Request error not found",
                                         HttpStatus.INTERNAL_SERVER_ERROR.value()));
             } catch (Exception e) {
-                logger.error(e.getMessage(), e);
+                logger.error("[{}] error recovering error data with id {}",
+                        context.getFunctionName(), error.getFolderId(), e);
             }
 
             if (paymentNoticeGenerationRequestError != null &&
@@ -100,7 +101,8 @@ public class ManageNoticeErrors {
                             completionToRetry.add(paymentNoticeGenerationRequest);
                         }
                     } catch (RequestRecoveryException e) {
-                        logger.error(e.getMessage(), e);
+                        logger.error("[{}] error recovering notice request with id {}",
+                                context.getFunctionName(), paymentNoticeGenerationRequestError.getId(), e);
                     }
                 } else {
 
@@ -110,16 +112,19 @@ public class ManageNoticeErrors {
                                 ObjectMapperUtils.mapString(plainRequestData, NoticeRequestEH.class);
                         noticesToRetry.add(noticeRequestEH);
                     } catch (Aes256Exception | JsonProcessingException e) {
+                        logger.error("[{}] error recovering error data with id {}",
+                                context.getFunctionName(), paymentNoticeGenerationRequestError.getId(), e);
                         throw new RuntimeException(e);
                     }
 
                 }
 
                 try {
-                    paymentNoticeGenerationRequestErrorClient.updatePaymentGenerationRequest(
+                    paymentNoticeGenerationRequestErrorClient.updatePaymentGenerationRequestError(
                             paymentNoticeGenerationRequestError);
                 } catch (Exception e) {
-                    logger.error(e.getMessage(), e);
+                    logger.error("[{}] error recovering error data with id {}",
+                            context.getFunctionName(), paymentNoticeGenerationRequestError.getId(), e);
                 }
 
             }

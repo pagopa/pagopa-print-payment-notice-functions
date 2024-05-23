@@ -7,7 +7,7 @@ import java.util.Optional;
 
 public interface PaymentNoticeGenerationRequestErrorClient {
 
-    void updatePaymentGenerationRequest(PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError);
+    void updatePaymentGenerationRequestError(PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError);
 
     Optional<PaymentNoticeGenerationRequestError> findOne(String folderId);
 
