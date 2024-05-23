@@ -53,7 +53,15 @@ public class ManageNoticeErrors {
     }
 
     /**
-     * This function will be invoked when a Queue trigger occurs
+     * This function will be invoked when a EH trigger occurs
+     *
+     * The function will manage errors coming from the generation service, or compression function
+     *
+     * In both cases it will be checked if the error does exist, recovering the latest attempt, and updating
+     * the number of attempts. Whenever the number of attempts exceeds the configured limit, no more actions
+     * will follow.
+     *
+     * The retries will be sent on the dedicated channel for the specific type of error managed
      */
     @FunctionName("ManageNoticeErrorsProcess")
     public void processNoticeErrors(

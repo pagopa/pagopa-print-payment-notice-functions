@@ -41,6 +41,12 @@ public class NoticeFolderServiceImpl implements NoticeFolderService {
         this.paymentNoticeGenerationRequestErrorClient = paymentNoticeGenerationRequestErrorClient;
     }
 
+    /**
+     * Method to managed a folder in completion, calling the related services for compression,
+     * if successful it will delete related errors
+     * @param paymentNoticeGenerationRequest data to use as input for folder management
+     * @throws SaveNoticeToBlobException
+     */
     @Override
     public void manageFolder(PaymentNoticeGenerationRequest paymentNoticeGenerationRequest)
             throws SaveNoticeToBlobException {
@@ -71,6 +77,12 @@ public class NoticeFolderServiceImpl implements NoticeFolderService {
 
     }
 
+    /**
+     * Finds an existing request using the folder id
+     * @param id folder id to use
+     * @return instance of a notice generation request
+     * @throws RequestRecoveryException
+     */
     @Override
     public PaymentNoticeGenerationRequest findRequest(String id) throws RequestRecoveryException {
         try {

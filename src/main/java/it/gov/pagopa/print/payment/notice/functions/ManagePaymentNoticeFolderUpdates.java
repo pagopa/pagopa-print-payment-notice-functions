@@ -32,7 +32,7 @@ public class ManagePaymentNoticeFolderUpdates {
     }
 
     /**
-     * This function will be invoked when a Queue trigger occurs
+     * This function will be invoked when a EH trigger occurs
      *
      * The function handles requests coming through the provided EH channel,
      * whenever a request is sent in status 'COMPLETING' it will check if the
