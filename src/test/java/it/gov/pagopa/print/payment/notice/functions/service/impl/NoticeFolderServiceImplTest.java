@@ -2,6 +2,7 @@ package it.gov.pagopa.print.payment.notice.functions.service.impl;
 
 import it.gov.pagopa.print.payment.notice.functions.client.PaymentNoticeBlobClient;
 import it.gov.pagopa.print.payment.notice.functions.client.PaymentNoticeGenerationRequestClient;
+import it.gov.pagopa.print.payment.notice.functions.client.PaymentNoticeGenerationRequestErrorClient;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentNoticeGenerationRequest;
 import it.gov.pagopa.print.payment.notice.functions.exception.SaveNoticeToBlobException;
 import it.gov.pagopa.print.payment.notice.functions.model.response.BlobStorageResponse;
@@ -11,6 +12,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -25,12 +28,22 @@ public class NoticeFolderServiceImplTest  {
     @Mock
     PaymentNoticeGenerationRequestClient paymentNoticeGenerationRequestClient;
 
+    @Mock
+    PaymentNoticeGenerationRequestErrorClient paymentNoticeGenerationRequestErrorClient;
+
     NoticeFolderServiceImpl noticeFolderService;
 
     @BeforeEach
     void init() {
-        Mockito.reset(paymentNoticeBlobClient, paymentNoticeGenerationRequestClient);
-        noticeFolderService = new NoticeFolderServiceImpl(paymentNoticeBlobClient, paymentNoticeGenerationRequestClient);
+        Mockito.reset(
+                paymentNoticeBlobClient,
+                paymentNoticeGenerationRequestClient,
+                paymentNoticeGenerationRequestErrorClient);
+        noticeFolderService = new NoticeFolderServiceImpl(
+                paymentNoticeBlobClient,
+                paymentNoticeGenerationRequestClient,
+                paymentNoticeGenerationRequestErrorClient
+        );
     }
 
     @Test
@@ -48,7 +61,8 @@ public class NoticeFolderServiceImplTest  {
         BlobStorageResponse blobStorageResponse = new BlobStorageResponse();
         blobStorageResponse.setStatusCode(500);
         when(paymentNoticeBlobClient.compressFolder(any())).thenReturn(blobStorageResponse);
-        assertThrows(SaveNoticeToBlobException.class, () -> noticeFolderService.manageFolder(PaymentNoticeGenerationRequest.builder().build()));
+        assertThrows(SaveNoticeToBlobException.class, () -> noticeFolderService.manageFolder(
+                PaymentNoticeGenerationRequest.builder().build()));
         verify(paymentNoticeBlobClient).compressFolder(any());
         verifyNoInteractions(paymentNoticeGenerationRequestClient);
     }
@@ -60,9 +74,17 @@ public class NoticeFolderServiceImplTest  {
         when(paymentNoticeBlobClient.compressFolder(any())).thenAnswer(item -> {
             throw new SaveNoticeToBlobException("Error", 500);
         });
-        assertThrows(SaveNoticeToBlobException.class, () -> noticeFolderService.manageFolder(PaymentNoticeGenerationRequest.builder().build()));
+        assertThrows(SaveNoticeToBlobException.class, () -> noticeFolderService.manageFolder(
+                PaymentNoticeGenerationRequest.builder().build()));
         verify(paymentNoticeBlobClient).compressFolder(any());
         verifyNoInteractions(paymentNoticeGenerationRequestClient);
+    }
+
+    @Test
+    void findRequestShouldReturnData() {
+        doReturn(Optional.of(PaymentNoticeGenerationRequest.builder().build()))
+                .when(paymentNoticeGenerationRequestClient).findById(any());
+        assertNotNull(assertDoesNotThrow(() -> noticeFolderService.findRequest(any())));
     }
 
 }
