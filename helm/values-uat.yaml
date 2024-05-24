@@ -1,0 +1,122 @@
+microservice-chart:
+  namespace: "printit"
+  nameOverride: ""
+  fullnameOverride: "print-payment-notice-generator"
+  image:
+    repository: ghcr.io/pagopa/pagopa-print-payment-notice-functions
+    tag: "0.0.5"
+    pullPolicy: Always
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 80
+    initialDelaySeconds: 150
+    failureThreshold: 6
+    periodSeconds: 10
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: 80
+    initialDelaySeconds: 150
+    failureThreshold: 6
+    periodSeconds: 10
+  deployment:
+    create: true
+  service:
+    create: true
+    type: ClusterIP
+    ports:
+      - 8080
+  ingress:
+    create: true
+    host: "printit.itn.internal.uat.platform.pagopa.it"
+    path: /pagopa-print-payment-notice-functions/(.*)
+    servicePort: 8080
+  serviceAccount:
+    create: false
+    annotations: {}
+    name: ""
+  podAnnotations: {}
+  podSecurityContext:
+    seccompProfile:
+      type: RuntimeDefault
+  securityContext:
+    allowPrivilegeEscalation: false
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "0.25"
+    limits:
+      memory: "512Mi"
+      cpu: "0.25"
+  autoscaling:
+    enable: true
+    minReplica: 1
+    maxReplica: 3
+    pollingInterval: 10 # seconds
+    cooldownPeriod: 50 # seconds
+    triggers:
+      - type: cpu
+        metadata:
+          # Required
+          type: Utilization # Allowed types are 'Utilization' or 'AverageValue'
+          value: "75"
+  envConfig:
+    WEBSITE_SITE_NAME: 'print-payment-notice-functions' # required to show cloud role name in application insights
+    ENV: 'azure-uat'
+    APP_LOGGING_LEVEL: 'DEBUG'
+    DEFAULT_LOGGING_LEVEL: 'INFO'
+    OTEL_SERVICE_NAME: 'print-payment-notice-functions'
+    OTEL_RESOURCE_ATTRIBUTES: "deployment.environment=uat"
+    OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.elastic-system.svc:4317"
+    OTEL_TRACES_EXPORTER: otlp
+    OTEL_METRICS_EXPORTER: otlp
+    OTEL_LOGS_EXPORTER: none
+    OTEL_TRACES_SAMPLER: "always_on"
+    NOTICE_REQUEST_MONGO_DB_NAME: "noticesMongoDb"
+    NOTICE_REQUEST_MONGO_COLLECTION_NAME: "payment_notice_generation_request"
+    BLOB_STORAGE_CONTAINER_NAME: "notices"
+    BLOB_STORAGE_ACCOUNT_ENDPOINT: "https://pagopaprintitnotices.blob.core.windows.net"
+  envSecret:
+    # required
+    APPLICATIONINSIGHTS_CONNECTION_STRING: 'app-insight-connection-string'
+    OTEL_EXPORTER_OTLP_HEADERS: 'elastic-apm-secret-token'
+    NOTICE_EVENTHUB_CONN_STRING: 'ehub-u-notice-complete-connection-string'
+    NOTICE_ERR_EVENTHUB_CONN_STRING: 'ehub-u-notice-errors-connection-string'
+    NOTICE_REQUEST_MONGODB_CONN_STRING: 'notices-mongo-connection-string'
+    NOTICE_STORAGE_CONN_STRING: 'notices-storage-account-connection-string'
+    AES_SECRET_KEY: 'aes-key'
+    AES_SALT: 'aes-salt'
+  keyvault:
+    name: "pagopa-u-itn-printit-kv"
+    tenantId: "7788edaf-0346-4068-9d79-c868aed15b3d"
+  nodeSelector: {}
+  tolerations: []
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: node_type
+                operator: In
+                values:
+                  - user
+  canaryDelivery:
+    create: false
+    ingress:
+      create: true
+      canary:
+        type: header
+        headerName: X-Canary
+        headerValue: canary
+        weightPercent: 0
+    service:
+      create: true
+    deployment:
+      create: true
+      image:
+        repository: ghcr.io/pagopa/pagopa-print-payment-notice-functions
+        tag: "0.0.0"
+        pullPolicy: Always
+      envConfig: {}
+      envSecret: {}
