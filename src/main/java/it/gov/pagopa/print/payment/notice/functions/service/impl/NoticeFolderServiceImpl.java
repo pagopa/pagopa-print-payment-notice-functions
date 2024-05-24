@@ -64,7 +64,9 @@ public class NoticeFolderServiceImpl implements NoticeFolderService {
         }
 
         try {
-            paymentNoticeGenerationRequest.setStatus(PaymentGenerationRequestStatus.PROCESSED);
+            paymentNoticeGenerationRequest.setStatus(paymentNoticeGenerationRequest.getNumberOfElementsFailed() != 0 ?
+                    PaymentGenerationRequestStatus.PROCESSED_WITH_FAILURES :
+                    PaymentGenerationRequestStatus.PROCESSED);
             paymentNoticeGenerationRequestClient
                     .updatePaymentGenerationRequest(paymentNoticeGenerationRequest);
             paymentNoticeGenerationRequestErrorClient.deleteRequestError(paymentNoticeGenerationRequest.getId());

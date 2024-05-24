@@ -70,7 +70,7 @@ public class ManageNoticeErrors {
                     eventHubName = "", // blank because the value is included in the connection string
                     connection = "NOTICE_ERR_EVENTHUB_CONN_STRING",
                     cardinality = Cardinality.MANY)
-            List<PaymentNoticeGenerationRequestError> errorList,
+            List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestError> errorList,
             @BindingName(value = "PropertiesArray") Map<String, Object>[] properties,
             @EventHubOutput(
                     name = "PaymentNoticeRequest",
@@ -78,10 +78,10 @@ public class ManageNoticeErrors {
                     connection = "NOTICE_EVENTHUB_CONN_STRING")
             List<NoticeRequestEH> noticesToRetry,
             @EventHubOutput(
-                    name = "PaymentNoticeRequest",
+                    name = "PaymentNoticeComplete",
                     eventHubName = "", // blank because the value is included in the connection string
                     connection = "NOTICE_COMPLETE_EVENTHUB_CONN_STRING")
-            List<PaymentNoticeGenerationRequest> completionToRetry,
+            List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequest> completionToRetry,
             final ExecutionContext context) {
 
         errorList.forEach(error -> {
@@ -100,13 +100,28 @@ public class ManageNoticeErrors {
             if (paymentNoticeGenerationRequestError != null &&
                     error.getNumberOfAttempts() < maxRetriesOnErrors) {
 
-                if (error.isCompressionError()) {
+                if (error.isCompressionError() &&
+                        !"UNKNOWN".equals(paymentNoticeGenerationRequestError.getFolderId())) {
                     try {
                         PaymentNoticeGenerationRequest paymentNoticeGenerationRequest =
                                 noticeFolderService.findRequest(error.getId());
                         if (paymentNoticeGenerationRequest.getStatus().equals(
                                 PaymentGenerationRequestStatus.COMPLETING)) {
-                            completionToRetry.add(paymentNoticeGenerationRequest);
+                            completionToRetry.add(
+                                    it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequest
+                                            .builder()
+                                    .id(paymentNoticeGenerationRequest.getId())
+                                    .numberOfElementsProcessed(paymentNoticeGenerationRequest
+                                            .getNumberOfElementsProcessed())
+                                    .numberOfElementsTotal(paymentNoticeGenerationRequest
+                                            .getNumberOfElementsTotal())
+                                    .numberOfElementsFailed(paymentNoticeGenerationRequest
+                                            .getNumberOfElementsFailed())
+                                    .status(paymentNoticeGenerationRequest.getStatus())
+                                    .userId(paymentNoticeGenerationRequest.getUserId())
+                                    .items(paymentNoticeGenerationRequest.getItems())
+                                    .build()
+                            );
                         }
                     } catch (RequestRecoveryException e) {
                         logger.error("[{}] error recovering notice request with id {}",
@@ -118,6 +133,7 @@ public class ManageNoticeErrors {
                         String plainRequestData = Aes256Utils.decrypt(error.getData());
                         NoticeRequestEH noticeRequestEH =
                                 ObjectMapperUtils.mapString(plainRequestData, NoticeRequestEH.class);
+                        noticeRequestEH.setErrorId(error.getId());
                         noticesToRetry.add(noticeRequestEH);
                     } catch (Aes256Exception | JsonProcessingException e) {
                         logger.error("[{}] error recovering error data with id {}",

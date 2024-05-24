@@ -4,7 +4,6 @@ import com.microsoft.azure.functions.ExecutionContext;
 import com.microsoft.azure.functions.annotation.*;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentGenerationRequestStatus;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentNoticeGenerationRequest;
-import it.gov.pagopa.print.payment.notice.functions.entity.PaymentNoticeGenerationRequestError;
 import it.gov.pagopa.print.payment.notice.functions.service.NoticeFolderService;
 import it.gov.pagopa.print.payment.notice.functions.service.impl.NoticeFolderServiceImpl;
 import org.slf4j.Logger;
@@ -53,13 +52,13 @@ public class ManagePaymentNoticeFolderUpdates {
                     eventHubName = "", // blank because the value is included in the connection string
                     connection = "NOTICE_COMPLETE_EVENTHUB_CONN_STRING",
                     cardinality = Cardinality.MANY)
-            List<PaymentNoticeGenerationRequest> requestMsg,
+            List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequest> requestMsg,
             @BindingName(value = "PropertiesArray") Map<String, Object>[] properties,
             @EventHubOutput(
                     name = "PaymentNoticeErrors",
                     eventHubName = "", // blank because the value is included in the connection string
                     connection = "NOTICE_ERR_EVENTHUB_CONN_STRING")
-            List<PaymentNoticeGenerationRequestError> errors,
+            List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestError> errors,
             final ExecutionContext context) {
 
         requestMsg.stream().filter(item -> (
@@ -71,11 +70,21 @@ public class ManagePaymentNoticeFolderUpdates {
                 ).forEach(item -> {
 
                     try {
-                        noticeFolderService.manageFolder(item);
+                        noticeFolderService.manageFolder(
+                                PaymentNoticeGenerationRequest.builder()
+                                        .id(item.getId())
+                                        .userId(item.getUserId())
+                                        .numberOfElementsProcessed(item.getNumberOfElementsProcessed())
+                                        .numberOfElementsFailed(item.getNumberOfElementsFailed())
+                                        .numberOfElementsTotal(item.getNumberOfElementsTotal())
+                                        .items(item.getItems())
+                                        .status(item.getStatus())
+                                .build());
                     } catch (Exception e) {
                         logger.error("[{}] error managing notice request with id {}",
                                 context.getFunctionName(), item.getId(), e);
-                        errors.add(PaymentNoticeGenerationRequestError.builder()
+                        errors.add(it.gov.pagopa.print.payment.notice.functions.model
+                                .PaymentNoticeGenerationRequestError.builder()
                                         .folderId(item.getId())
                                         .numberOfAttempts(0)
                                         .compressionError(true)

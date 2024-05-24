@@ -52,10 +52,12 @@ class ManageNoticeErrorsTest {
 
     @Test
     void shouldSendRequestOnValidData() throws SaveNoticeToBlobException, RequestRecoveryException {
-        List<PaymentNoticeGenerationRequest> paymentNoticeGenerationRequestList =
-                new ArrayList<>();
-        List<PaymentNoticeGenerationRequestError> paymentNoticeGenerationRequestErrors =
-               Collections.singletonList(PaymentNoticeGenerationRequestError.builder().numberOfAttempts(0)
+        List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequest>
+                paymentNoticeGenerationRequestList = new ArrayList<>();
+        List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestError>
+                paymentNoticeGenerationRequestErrors =
+               Collections.singletonList(it.gov.pagopa.print.payment.notice.functions.model
+                       .PaymentNoticeGenerationRequestError.builder().numberOfAttempts(0)
                                .compressionError(true)
                                .id("test")
                                .folderId("test")
@@ -85,10 +87,12 @@ class ManageNoticeErrorsTest {
                 "AES_SALT", "test"
         ).execute(() -> {
 
-            List<PaymentNoticeGenerationRequest> paymentNoticeGenerationRequestList =
-                    new ArrayList<>();
-            List<PaymentNoticeGenerationRequestError> paymentNoticeGenerationRequestErrors =
-                    Collections.singletonList(PaymentNoticeGenerationRequestError.builder().numberOfAttempts(0)
+            List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequest>
+                    paymentNoticeGenerationRequestList = new ArrayList<>();
+            List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestError>
+                    paymentNoticeGenerationRequestErrors = Collections.singletonList(
+                            it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestError
+                                    .builder().numberOfAttempts(0)
                             .compressionError(false)
                             .id("test")
                             .folderId("test")
