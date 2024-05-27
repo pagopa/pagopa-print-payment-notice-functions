@@ -50,15 +50,7 @@ class ManagePaymentNoticeFolderUpdatesTest {
                         .numberOfElementsTotal(2).numberOfElementsFailed(1).build());
         List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestError>
                 paymentNoticeGenerationRequestErrors = new ArrayList<>();
-        assertDoesNotThrow(() -> sut.processGenerateReceipt(paymentNoticeGenerationRequestList.stream().map(
-                        item -> {
-                            try {
-                                return ObjectMapperUtils.writeValueAsString(item);
-                            } catch (JsonProcessingException e) {
-                                throw new RuntimeException(e);
-                            }
-                        }).toList(),
-                new HashMap[]{new HashMap<>()},
+        assertDoesNotThrow(() -> sut.processGenerateReceipt(paymentNoticeGenerationRequestList,
                 paymentNoticeGenerationRequestErrors,executionContextMock));
         verify(noticeFolderService).manageFolder(any());
         assertEquals(0, paymentNoticeGenerationRequestErrors.size());
@@ -74,15 +66,7 @@ class ManagePaymentNoticeFolderUpdatesTest {
                         .numberOfElementsProcessed(1).numberOfElementsFailed(0).build());
         List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestError>
                 paymentNoticeGenerationRequestErrors = new ArrayList<>();
-        assertDoesNotThrow(() -> sut.processGenerateReceipt(paymentNoticeGenerationRequestList.stream().map(
-                item -> {
-                    try {
-                        return ObjectMapperUtils.writeValueAsString(item);
-                    } catch (JsonProcessingException e) {
-                        throw new RuntimeException(e);
-                    }
-                }).toList(),
-                new HashMap[]{new HashMap<>()},
+        assertDoesNotThrow(() -> sut.processGenerateReceipt(paymentNoticeGenerationRequestList,
                 paymentNoticeGenerationRequestErrors,executionContextMock));
         verifyNoInteractions(noticeFolderService);
         assertEquals(0, paymentNoticeGenerationRequestErrors.size());
@@ -100,15 +84,7 @@ class ManagePaymentNoticeFolderUpdatesTest {
         doAnswer(item -> {
             throw new SaveNoticeToBlobException("Error", 500);
         }).when(noticeFolderService).manageFolder(any());
-        assertDoesNotThrow(() -> sut.processGenerateReceipt(paymentNoticeGenerationRequestList.stream().map(
-                        item -> {
-                            try {
-                                return ObjectMapperUtils.writeValueAsString(item);
-                            } catch (JsonProcessingException e) {
-                                throw new RuntimeException(e);
-                            }
-                        }).toList(),
-                new HashMap[]{new HashMap<>()},
+        assertDoesNotThrow(() -> sut.processGenerateReceipt(paymentNoticeGenerationRequestList,
                 paymentNoticeGenerationRequestErrors,executionContextMock));
         verify(noticeFolderService).manageFolder(any());
         assertEquals(1, paymentNoticeGenerationRequestErrors.size());

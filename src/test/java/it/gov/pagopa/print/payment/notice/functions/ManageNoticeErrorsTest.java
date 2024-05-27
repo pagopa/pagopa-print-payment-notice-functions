@@ -2,10 +2,8 @@ package it.gov.pagopa.print.payment.notice.functions;
 
 import com.microsoft.azure.functions.ExecutionContext;
 import it.gov.pagopa.print.payment.notice.functions.client.PaymentNoticeGenerationRequestErrorClient;
-import it.gov.pagopa.print.payment.notice.functions.client.impl.PaymentNoticeGenerationRequestClientImpl;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentGenerationRequestStatus;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentNoticeGenerationRequest;
-import it.gov.pagopa.print.payment.notice.functions.entity.PaymentNoticeGenerationRequestError;
 import it.gov.pagopa.print.payment.notice.functions.exception.RequestRecoveryException;
 import it.gov.pagopa.print.payment.notice.functions.exception.SaveNoticeToBlobException;
 import it.gov.pagopa.print.payment.notice.functions.model.notice.NoticeGenerationRequestItem;
@@ -13,7 +11,6 @@ import it.gov.pagopa.print.payment.notice.functions.model.notice.NoticeRequestEH
 import it.gov.pagopa.print.payment.notice.functions.service.NoticeFolderService;
 import it.gov.pagopa.print.payment.notice.functions.utils.Aes256Utils;
 import it.gov.pagopa.print.payment.notice.functions.utils.ObjectMapperUtils;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,12 +18,16 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.verify;
 import static uk.org.webcompere.systemstubs.SystemStubs.withEnvironmentVariables;
 
 @ExtendWith(MockitoExtension.class)
@@ -70,8 +71,8 @@ class ManageNoticeErrorsTest {
                 .numberOfElementsTotal(2).numberOfElementsFailed(1).build())
                 .when(noticeFolderService).findRequest(any());
         List<NoticeRequestEH> eventsToRetry = new ArrayList<>();
-        assertDoesNotThrow(() -> sut.processNoticeErrors(paymentNoticeGenerationRequestErrors,
-                new HashMap[]{new HashMap<>()},
+        assertDoesNotThrow(() -> sut.processNoticeErrors(
+                paymentNoticeGenerationRequestErrors,
                 eventsToRetry,
                 paymentNoticeGenerationRequestList,
                 executionContextMock));
@@ -108,7 +109,6 @@ class ManageNoticeErrorsTest {
                     .findOne(any());
 
             assertDoesNotThrow(() -> sut.processNoticeErrors(paymentNoticeGenerationRequestErrors,
-                    new HashMap[]{new HashMap<>()},
                     eventsToRetry,
                     paymentNoticeGenerationRequestList,
                     executionContextMock));

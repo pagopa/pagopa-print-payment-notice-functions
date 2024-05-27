@@ -70,8 +70,7 @@ public class ManageNoticeErrors {
                     eventHubName = "", // blank because the value is included in the connection string
                     connection = "NOTICE_ERR_EVENTHUB_CONN_STRING",
                     cardinality = Cardinality.MANY)
-            List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestError> errorList,
-            @BindingName(value = "PropertiesArray") Map<String, Object>[] properties,
+            List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestError> paymentNoticeErrors,
             @EventHubOutput(
                     name = "PaymentNoticeRequest",
                     eventHubName = "", // blank because the value is included in the connection string
@@ -84,7 +83,7 @@ public class ManageNoticeErrors {
             List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequest> completionToRetry,
             final ExecutionContext context) {
 
-        errorList.forEach(error -> {
+        paymentNoticeErrors.forEach(error -> {
 
             PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError = null;
             try {

@@ -1,7 +1,10 @@
 package it.gov.pagopa.print.payment.notice.functions;
 
 import com.microsoft.azure.functions.ExecutionContext;
-import com.microsoft.azure.functions.annotation.*;
+import com.microsoft.azure.functions.annotation.Cardinality;
+import com.microsoft.azure.functions.annotation.EventHubOutput;
+import com.microsoft.azure.functions.annotation.EventHubTrigger;
+import com.microsoft.azure.functions.annotation.FunctionName;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentGenerationRequestStatus;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentNoticeGenerationRequest;
 import it.gov.pagopa.print.payment.notice.functions.service.NoticeFolderService;
@@ -10,7 +13,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -52,8 +54,7 @@ public class ManagePaymentNoticeFolderUpdates {
                     eventHubName = "", // blank because the value is included in the connection string
                     connection = "NOTICE_COMPLETE_EVENTHUB_CONN_STRING",
                     cardinality = Cardinality.MANY)
-            List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequest> requestMsg,
-            @BindingName(value = "PropertiesArray") Map<String, Object>[] properties,
+            List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequest> paymentNoticeComplete,
             @EventHubOutput(
                     name = "PaymentNoticeErrors",
                     eventHubName = "", // blank because the value is included in the connection string
@@ -61,7 +62,7 @@ public class ManagePaymentNoticeFolderUpdates {
             List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestError> errors,
             final ExecutionContext context) {
 
-        requestMsg.stream().filter(item -> (
+        paymentNoticeComplete.stream().filter(item -> (
 
                 Objects.equals(
                         item.getNumberOfElementsProcessed() + item.getNumberOfElementsFailed(),
