@@ -4,7 +4,7 @@ microservice-chart:
   fullnameOverride: "print-payment-notice-generator"
   image:
     repository: ghcr.io/pagopa/pagopa-print-payment-notice-functions
-    tag: "0.0.1-1-feat-update-functions"
+    tag: "0.0.2"
     pullPolicy: Always
   livenessProbe:
     httpGet:
