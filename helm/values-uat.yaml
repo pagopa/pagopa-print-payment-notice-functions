@@ -34,9 +34,9 @@ microservice-chart:
     servicePort: 8080
   serviceAccount:
     create: false
-    annotations: {}
+    annotations: { }
     name: ""
-  podAnnotations: {}
+  podAnnotations: { }
   podSecurityContext:
     seccompProfile:
       type: RuntimeDefault
@@ -84,18 +84,18 @@ microservice-chart:
     APPLICATIONINSIGHTS_CONNECTION_STRING: 'app-insight-connection-string'
     OTEL_EXPORTER_OTLP_HEADERS: 'elastic-apm-secret-token'
     NOTICE_EVENTHUB_CONN_STRING: 'ehub-u-notice-connection-string'
-    AzureWebJobsStorage: 'ehub-u-notice-connection-string'
+    AzureWebJobsStorage: 'notices-storage-account-connection-string'
     NOTICE_ERR_EVENTHUB_CONN_STRING: 'ehub-u-notice-errors-connection-string'
     NOTICE_COMPLETE_EVENTHUB_CONN_STRING: 'ehub-u-notice-complete-connection-string'
     NOTICE_REQUEST_MONGODB_CONN_STRING: 'notices-mongo-connection-string'
-    NOTICE_STORAGE_CONN_STRING: 'notices-storage-account-connection-string'
+    BLOB_STORAGE_CONN_STRING: 'notices-storage-account-connection-string'
     AES_SECRET_KEY: 'aes-key'
     AES_SALT: 'aes-salt'
   keyvault:
     name: "pagopa-u-itn-printit-kv"
     tenantId: "7788edaf-0346-4068-9d79-c868aed15b3d"
-  nodeSelector: {}
-  tolerations: []
+  nodeSelector: { }
+  tolerations: [ ]
   affinity:
     nodeAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -122,5 +122,5 @@ microservice-chart:
         repository: ghcr.io/pagopa/pagopa-print-payment-notice-functions
         tag: "0.0.0"
         pullPolicy: Always
-      envConfig: {}
-      envSecret: {}
+      envConfig: { }
+      envSecret: { }
