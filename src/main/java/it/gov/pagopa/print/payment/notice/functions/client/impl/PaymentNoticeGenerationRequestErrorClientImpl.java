@@ -22,26 +22,39 @@ public class PaymentNoticeGenerationRequestErrorClientImpl implements PaymentNot
 
     private static PaymentNoticeGenerationRequestErrorClientImpl instance;
 
-    private final MongoCollection<PaymentNoticeGenerationRequestError> mongoCollection;
+    private static MongoClient mongoClient;
+    private static final CodecRegistry pojoCodecRegistry = fromRegistries(getDefaultCodecRegistry(),
+            fromProviders(PojoCodecProvider.builder().automatic(true).build()));
+
 
     private PaymentNoticeGenerationRequestErrorClientImpl() {
-        String connectionString = System.getenv("NOTICE_REQUEST_MONGODB_CONN_STRING");
-        String databaseName = System.getenv("NOTICE_REQUEST_MONGO_DB_NAME");
-        String collectionName = System.getenv("NOTICE_ERR_REQUEST_MONGO_COLLECTION_NAME");
-
-
-        CodecProvider pojoCodecProvider = PojoCodecProvider.builder().automatic(true).build();
-        CodecRegistry pojoCodecRegistry = fromRegistries(getDefaultCodecRegistry(),
-                fromProviders(pojoCodecProvider));
-        MongoClient mongoClient = MongoClients.create(connectionString);
-        MongoDatabase database = mongoClient.getDatabase(databaseName)
-                .withCodecRegistry(pojoCodecRegistry);
-        mongoCollection = database.getCollection(collectionName, PaymentNoticeGenerationRequestError.class);
-
+        createClient();
     }
 
-    PaymentNoticeGenerationRequestErrorClientImpl(MongoCollection<PaymentNoticeGenerationRequestError> mongoCollection) {
-        this.mongoCollection = mongoCollection;
+    private static void createClient() {
+        String connectionString = System.getenv("NOTICE_REQUEST_MONGODB_CONN_STRING");
+        mongoClient = MongoClients.create(connectionString);
+    }
+
+    PaymentNoticeGenerationRequestErrorClientImpl(MongoClient mongoClient) {
+        this.mongoClient = mongoClient;
+    }
+
+    public MongoCollection<PaymentNoticeGenerationRequestError> getMongoCollection() {
+        String databaseName = System.getenv("NOTICE_REQUEST_MONGO_DB_NAME");
+        String collectionName = System.getenv("NOTICE_ERR_REQUEST_MONGO_COLLECTION_NAME");
+        if (mongoClient == null) {
+            createClient();
+        }
+        try {
+            MongoDatabase database = mongoClient.getDatabase(databaseName)
+                    .withCodecRegistry(pojoCodecRegistry);
+            return database.getCollection(collectionName, PaymentNoticeGenerationRequestError.class);
+        } catch (Exception e) {
+            mongoClient.close();
+            mongoClient = null;
+            throw new RuntimeException("Error recovering db", e);
+        }
     }
 
     public static PaymentNoticeGenerationRequestErrorClientImpl getInstance() {
@@ -55,18 +68,20 @@ public class PaymentNoticeGenerationRequestErrorClientImpl implements PaymentNot
     @Override
     public void updatePaymentGenerationRequestError(
             PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError) {
-        mongoCollection.updateOne(Filters.eq("_id", paymentNoticeGenerationRequestError.getId()),
+        getMongoCollection().updateOne(Filters.eq("_id",
+                        paymentNoticeGenerationRequestError.getId()),
                 Updates.inc("numberOfAttempts", 1));
     }
 
     @Override
     public Optional<PaymentNoticeGenerationRequestError> findOne(String folderId) {
-        return Optional.ofNullable(mongoCollection.find(Filters.eq("folderId", folderId)).first());
+        return Optional.ofNullable(getMongoCollection().find(
+                Filters.eq("folderId", folderId)).first());
     }
 
     @Override
     public void deleteRequestError(String id) {
-        mongoCollection.deleteOne(Filters.eq("folderId", id));
+        getMongoCollection().deleteOne(Filters.eq("folderId", id));
     }
 
 }

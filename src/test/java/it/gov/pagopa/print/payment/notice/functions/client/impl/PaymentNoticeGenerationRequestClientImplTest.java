@@ -8,7 +8,9 @@ import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.models.BlobItem;
 import com.microsoft.azure.functions.HttpStatus;
 import com.mongodb.client.FindIterable;
+import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentGenerationRequestStatus;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentNoticeGenerationRequest;
 import it.gov.pagopa.print.payment.notice.functions.model.response.BlobStorageResponse;
@@ -38,13 +40,24 @@ class PaymentNoticeGenerationRequestClientImplTest {
     @Mock
     public MongoCollection mongoCollection;
 
+    @Mock
+    public MongoClient mongoClient;
+
+    @Mock
+    public MongoDatabase mongoDatabase;
+
     PaymentNoticeGenerationRequestClientImpl paymentNoticeGenerationRequestClient;
 
     @BeforeEach
     public void init() {
-        reset(mongoCollection);
+        reset(mongoClient, mongoDatabase, mongoCollection);
+        mongoClient = Mockito.mock(MongoClient.class);
+        mongoDatabase = Mockito.mock(MongoDatabase.class);
+        lenient().when(mongoClient.getDatabase(any())).thenReturn(mongoDatabase);
+        lenient().when(mongoDatabase.withCodecRegistry(any())).thenReturn(mongoDatabase);
+        lenient().when(mongoDatabase.getCollection(any(),any())).thenReturn(mongoCollection);
         paymentNoticeGenerationRequestClient =
-                new PaymentNoticeGenerationRequestClientImpl(mongoCollection);
+                new PaymentNoticeGenerationRequestClientImpl(mongoClient);
     }
 
     @Test
@@ -59,7 +72,7 @@ class PaymentNoticeGenerationRequestClientImplTest {
     @Test
     void shouldExecuteUpdateWithoutExceptions() throws IOException {
         assertDoesNotThrow(() ->
-                new PaymentNoticeGenerationRequestClientImpl(Mockito.mock(MongoCollection.class))
+                paymentNoticeGenerationRequestClient
                 .updatePaymentGenerationRequest(
                 PaymentNoticeGenerationRequest.builder().status(PaymentGenerationRequestStatus.PROCESSED)
                         .build()));
