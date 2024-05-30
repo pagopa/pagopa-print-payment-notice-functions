@@ -13,5 +13,6 @@ public class NoticeRequestEH {
 
     private String folderId;
     private NoticeGenerationRequestItem noticeData;
+    private String errorId;
 
 }

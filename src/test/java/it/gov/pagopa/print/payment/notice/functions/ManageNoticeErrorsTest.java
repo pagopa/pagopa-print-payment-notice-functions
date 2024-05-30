@@ -2,7 +2,6 @@ package it.gov.pagopa.print.payment.notice.functions;
 
 import com.microsoft.azure.functions.ExecutionContext;
 import it.gov.pagopa.print.payment.notice.functions.client.PaymentNoticeGenerationRequestErrorClient;
-import it.gov.pagopa.print.payment.notice.functions.client.impl.PaymentNoticeGenerationRequestClientImpl;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentGenerationRequestStatus;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentNoticeGenerationRequest;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentNoticeGenerationRequestError;
@@ -13,7 +12,6 @@ import it.gov.pagopa.print.payment.notice.functions.model.notice.NoticeRequestEH
 import it.gov.pagopa.print.payment.notice.functions.service.NoticeFolderService;
 import it.gov.pagopa.print.payment.notice.functions.utils.Aes256Utils;
 import it.gov.pagopa.print.payment.notice.functions.utils.ObjectMapperUtils;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,7 +19,10 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -52,24 +53,31 @@ class ManageNoticeErrorsTest {
 
     @Test
     void shouldSendRequestOnValidData() throws SaveNoticeToBlobException, RequestRecoveryException {
-        List<PaymentNoticeGenerationRequest> paymentNoticeGenerationRequestList =
-                new ArrayList<>();
-        List<PaymentNoticeGenerationRequestError> paymentNoticeGenerationRequestErrors =
-               Collections.singletonList(PaymentNoticeGenerationRequestError.builder().numberOfAttempts(0)
+        List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequest>
+                paymentNoticeGenerationRequestList = new ArrayList<>();
+        List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestError>
+                paymentNoticeGenerationRequestErrors =
+               Collections.singletonList(it.gov.pagopa.print.payment.notice.functions.model
+                       .PaymentNoticeGenerationRequestError.builder().numberOfAttempts(0)
                                .compressionError(true)
                                .id("test")
                                .folderId("test")
                        .build());
-        doReturn(Optional.of(paymentNoticeGenerationRequestErrors.get(0)))
+        doReturn(Optional.of(PaymentNoticeGenerationRequestError.builder().compressionError(true)
+                        .folderId("test")
+                        .id("test")
+                        .numberOfAttempts(0)
+                        .compressionError(true)
+                .build()))
                 .when(paymentNoticeGenerationRequestErrorClient)
                 .findOne(any());
         doReturn(PaymentNoticeGenerationRequest.builder()
-                .status(PaymentGenerationRequestStatus.COMPLETING).numberOfElementsProcessed(1)
+                .status(PaymentGenerationRequestStatus.COMPLETING)
                 .numberOfElementsTotal(2).numberOfElementsFailed(1).build())
                 .when(noticeFolderService).findRequest(any());
         List<NoticeRequestEH> eventsToRetry = new ArrayList<>();
-        assertDoesNotThrow(() -> sut.processNoticeErrors(paymentNoticeGenerationRequestErrors,
-                new HashMap[]{new HashMap<>()},
+        assertDoesNotThrow(() -> sut.processNoticeErrors(
+                paymentNoticeGenerationRequestErrors,
                 eventsToRetry,
                 paymentNoticeGenerationRequestList,
                 executionContextMock));
@@ -85,10 +93,12 @@ class ManageNoticeErrorsTest {
                 "AES_SALT", "test"
         ).execute(() -> {
 
-            List<PaymentNoticeGenerationRequest> paymentNoticeGenerationRequestList =
-                    new ArrayList<>();
-            List<PaymentNoticeGenerationRequestError> paymentNoticeGenerationRequestErrors =
-                    Collections.singletonList(PaymentNoticeGenerationRequestError.builder().numberOfAttempts(0)
+            List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequest>
+                    paymentNoticeGenerationRequestList = new ArrayList<>();
+            List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestError>
+                    paymentNoticeGenerationRequestErrors = Collections.singletonList(
+                            it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestError
+                                    .builder().numberOfAttempts(0)
                             .compressionError(false)
                             .id("test")
                             .folderId("test")
@@ -99,12 +109,16 @@ class ManageNoticeErrorsTest {
                             .build());
             List<NoticeRequestEH> eventsToRetry = new ArrayList<>();
 
-            doReturn(Optional.of(paymentNoticeGenerationRequestErrors.get(0)))
+            doReturn(Optional.of(PaymentNoticeGenerationRequestError.builder().compressionError(true)
+                    .folderId("test")
+                    .id("test")
+                    .numberOfAttempts(0)
+                    .compressionError(false)
+                    .build()))
                     .when(paymentNoticeGenerationRequestErrorClient)
                     .findOne(any());
 
             assertDoesNotThrow(() -> sut.processNoticeErrors(paymentNoticeGenerationRequestErrors,
-                    new HashMap[]{new HashMap<>()},
                     eventsToRetry,
                     paymentNoticeGenerationRequestList,
                     executionContextMock));
@@ -114,6 +128,64 @@ class ManageNoticeErrorsTest {
         });
 
 
+    }
+
+
+    @Test
+    void shouldntSendRequestOnMissingData() throws SaveNoticeToBlobException, RequestRecoveryException {
+        List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequest>
+                paymentNoticeGenerationRequestList = new ArrayList<>();
+        List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestError>
+                paymentNoticeGenerationRequestErrors =
+                Collections.singletonList(it.gov.pagopa.print.payment.notice.functions.model
+                        .PaymentNoticeGenerationRequestError.builder().numberOfAttempts(0)
+                        .compressionError(true)
+                        .id("test")
+                        .folderId("test")
+                        .build());
+        doReturn(Optional.ofNullable(null))
+                .when(paymentNoticeGenerationRequestErrorClient)
+                .findOne(any());
+        List<NoticeRequestEH> eventsToRetry = new ArrayList<>();
+        assertDoesNotThrow(() -> sut.processNoticeErrors(
+                paymentNoticeGenerationRequestErrors,
+                eventsToRetry,
+                paymentNoticeGenerationRequestList,
+                executionContextMock));
+        assertEquals(0, eventsToRetry.size());
+        assertEquals(0, paymentNoticeGenerationRequestList.size());
+    }
+
+    @Test
+    void shouldntSendRequestOnException() throws SaveNoticeToBlobException, RequestRecoveryException {
+        List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequest>
+                paymentNoticeGenerationRequestList = new ArrayList<>();
+        List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestError>
+                paymentNoticeGenerationRequestErrors =
+                Collections.singletonList(it.gov.pagopa.print.payment.notice.functions.model
+                        .PaymentNoticeGenerationRequestError.builder().numberOfAttempts(0)
+                        .compressionError(true)
+                        .id("test")
+                        .folderId("test")
+                        .build());
+        doReturn(Optional.of(PaymentNoticeGenerationRequestError.builder().compressionError(true)
+                .folderId("test")
+                .id("test")
+                .numberOfAttempts(0)
+                .compressionError(true)
+                .build()))
+                .when(paymentNoticeGenerationRequestErrorClient)
+                .findOne(any());
+        doAnswer(item -> {throw new RequestRecoveryException("test",500);}).when(noticeFolderService).findRequest(any());
+        List<NoticeRequestEH> eventsToRetry = new ArrayList<>();
+        assertDoesNotThrow(() -> sut.processNoticeErrors(
+                paymentNoticeGenerationRequestErrors,
+                eventsToRetry,
+                paymentNoticeGenerationRequestList,
+                executionContextMock));
+        verify(noticeFolderService).findRequest(any());
+        assertEquals(0, eventsToRetry.size());
+        assertEquals(0, paymentNoticeGenerationRequestList.size());
     }
 
 

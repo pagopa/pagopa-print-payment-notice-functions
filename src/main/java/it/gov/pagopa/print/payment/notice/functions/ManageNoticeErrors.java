@@ -37,6 +37,8 @@ public class ManageNoticeErrors {
 
     private final Integer maxRetriesOnErrors;
 
+    private String ERROR_STRING = "[{}] error recovering error data with id {}";
+
     public ManageNoticeErrors() {
         this.noticeFolderService = new NoticeFolderServiceImpl();
         this.maxRetriesOnErrors =  Integer.parseInt(System.getenv("MAX_RETRIES_ON_ERRORS"));
@@ -70,75 +72,97 @@ public class ManageNoticeErrors {
                     eventHubName = "", // blank because the value is included in the connection string
                     connection = "NOTICE_ERR_EVENTHUB_CONN_STRING",
                     cardinality = Cardinality.MANY)
-            List<PaymentNoticeGenerationRequestError> errorList,
-            @BindingName(value = "PropertiesArray") Map<String, Object>[] properties,
+            List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestError> paymentNoticeErrors,
             @EventHubOutput(
                     name = "PaymentNoticeRequest",
                     eventHubName = "", // blank because the value is included in the connection string
                     connection = "NOTICE_EVENTHUB_CONN_STRING")
             List<NoticeRequestEH> noticesToRetry,
             @EventHubOutput(
-                    name = "PaymentNoticeRequest",
+                    name = "PaymentNoticeComplete",
                     eventHubName = "", // blank because the value is included in the connection string
                     connection = "NOTICE_COMPLETE_EVENTHUB_CONN_STRING")
-            List<PaymentNoticeGenerationRequest> completionToRetry,
+            List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequest> completionToRetry,
             final ExecutionContext context) {
 
-        errorList.forEach(error -> {
+        paymentNoticeErrors.forEach(error -> {
 
             PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError = null;
             try {
                 paymentNoticeGenerationRequestError =
-                        paymentNoticeGenerationRequestErrorClient.findOne(error.getFolderId()).orElseThrow(() ->
+                        paymentNoticeGenerationRequestErrorClient.findOne(error.getId()).orElseThrow(() ->
                                 new PaymentNoticeManagementException("Request error not found",
                                         HttpStatus.INTERNAL_SERVER_ERROR.value()));
             } catch (Exception e) {
-                logger.error("[{}] error recovering error data with id {}",
+                logger.error(ERROR_STRING,
                         context.getFunctionName(), error.getFolderId(), e);
             }
 
             if (paymentNoticeGenerationRequestError != null &&
                     error.getNumberOfAttempts() < maxRetriesOnErrors) {
 
-                if (error.isCompressionError()) {
-                    try {
-                        PaymentNoticeGenerationRequest paymentNoticeGenerationRequest =
-                                noticeFolderService.findRequest(error.getId());
-                        if (paymentNoticeGenerationRequest.getStatus().equals(
-                                PaymentGenerationRequestStatus.COMPLETING)) {
-                            completionToRetry.add(paymentNoticeGenerationRequest);
-                        }
-                    } catch (RequestRecoveryException e) {
-                        logger.error("[{}] error recovering notice request with id {}",
-                                context.getFunctionName(), paymentNoticeGenerationRequestError.getId(), e);
-                    }
+                if (error.isCompressionError() &&
+                        !"UNKNOWN".equals(paymentNoticeGenerationRequestError.getFolderId())) {
+                    addRequestsToRetry(completionToRetry, context, error, paymentNoticeGenerationRequestError);
                 } else {
 
-                    try {
-                        String plainRequestData = Aes256Utils.decrypt(error.getData());
-                        NoticeRequestEH noticeRequestEH =
-                                ObjectMapperUtils.mapString(plainRequestData, NoticeRequestEH.class);
-                        noticesToRetry.add(noticeRequestEH);
-                    } catch (Aes256Exception | JsonProcessingException e) {
-                        logger.error("[{}] error recovering error data with id {}",
-                                context.getFunctionName(), paymentNoticeGenerationRequestError.getId(), e);
-                        throw new RuntimeException(e);
-                    }
-
+                    addToNoticesToRetry(noticesToRetry, context, error, paymentNoticeGenerationRequestError);
                 }
 
-                try {
-                    paymentNoticeGenerationRequestErrorClient.updatePaymentGenerationRequestError(
-                            paymentNoticeGenerationRequestError);
-                } catch (Exception e) {
-                    logger.error("[{}] error recovering error data with id {}",
-                            context.getFunctionName(), paymentNoticeGenerationRequestError.getId(), e);
-                }
+                updateError(context, paymentNoticeGenerationRequestError);
 
             }
 
         });
 
+    }
+
+    private void updateError(ExecutionContext context, PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError) {
+        try {
+            paymentNoticeGenerationRequestErrorClient.updatePaymentGenerationRequestError(
+                    paymentNoticeGenerationRequestError);
+        } catch (Exception e) {
+            logger.error(ERROR_STRING,
+                    context.getFunctionName(), paymentNoticeGenerationRequestError.getId(), e);
+        }
+    }
+
+    private void addRequestsToRetry(List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequest> completionToRetry, ExecutionContext context, it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestError error, PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError) {
+        try {
+            PaymentNoticeGenerationRequest paymentNoticeGenerationRequest =
+                    noticeFolderService.findRequest(error.getId());
+            if (paymentNoticeGenerationRequest.getStatus().equals(
+                    PaymentGenerationRequestStatus.COMPLETING)) {
+                completionToRetry.add(
+                        it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequest
+                                .builder()
+                        .id(paymentNoticeGenerationRequest.getId())
+                        .numberOfElementsTotal(paymentNoticeGenerationRequest
+                                .getNumberOfElementsTotal())
+                        .numberOfElementsFailed(paymentNoticeGenerationRequest
+                                .getNumberOfElementsFailed())
+                        .status(paymentNoticeGenerationRequest.getStatus())
+                        .userId(paymentNoticeGenerationRequest.getUserId())
+                        .items(paymentNoticeGenerationRequest.getItems())
+                        .build()
+                );
+            }
+        } catch (RequestRecoveryException e) {
+            logger.error(ERROR_STRING,
+                    context.getFunctionName(), paymentNoticeGenerationRequestError.getId(), e);
+        }
+    }
+
+    private void addToNoticesToRetry(List<NoticeRequestEH> noticesToRetry, ExecutionContext context, it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestError error, PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError) {
+        try {
+            String plainRequestData = Aes256Utils.decrypt(error.getData());
+            NoticeRequestEH noticeRequestEH =
+                    ObjectMapperUtils.mapString(plainRequestData, NoticeRequestEH.class);
+            noticeRequestEH.setErrorId(error.getId());
+            noticesToRetry.add(noticeRequestEH);
+        } catch (Aes256Exception | JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 }

@@ -17,6 +17,10 @@ public class Notice {
 
     private Long paymentAmount;
 
+    private Long reducedAmount;
+
+    private Long discountedAmount;
+
     private String dueDate;
 
     private String code;

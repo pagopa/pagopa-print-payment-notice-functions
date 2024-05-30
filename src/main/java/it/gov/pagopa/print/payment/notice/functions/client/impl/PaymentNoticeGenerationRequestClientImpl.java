@@ -34,8 +34,14 @@ public class PaymentNoticeGenerationRequestClientImpl implements PaymentNoticeGe
         CodecRegistry pojoCodecRegistry = fromRegistries(getDefaultCodecRegistry(),
                 fromProviders(pojoCodecProvider));
         MongoClient mongoClient = MongoClients.create(connectionString);
-        MongoDatabase database = mongoClient.getDatabase(databaseName)
-                .withCodecRegistry(pojoCodecRegistry);
+        MongoDatabase database;
+        try {
+            database = mongoClient.getDatabase(databaseName)
+                    .withCodecRegistry(pojoCodecRegistry);
+        } catch (Exception e) {
+            mongoClient.close();
+            throw e;
+        }
         mongoCollection = database.getCollection(collectionName, PaymentNoticeGenerationRequest.class);
 
     }
@@ -45,7 +51,7 @@ public class PaymentNoticeGenerationRequestClientImpl implements PaymentNoticeGe
     }
 
     public static PaymentNoticeGenerationRequestClientImpl getInstance() {
-        if (instance == null) {
+        if(instance == null) {
             instance = new PaymentNoticeGenerationRequestClientImpl();
         }
 

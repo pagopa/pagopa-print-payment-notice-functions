@@ -25,8 +25,8 @@ public class PaymentNoticeGenerationRequestErrorClientImpl implements PaymentNot
     private final MongoCollection<PaymentNoticeGenerationRequestError> mongoCollection;
 
     private PaymentNoticeGenerationRequestErrorClientImpl() {
-        String connectionString = System.getenv("NOTICE_ERR_REQUEST_MONGODB_CONN_STRING");
-        String databaseName = System.getenv("NOTICE_ERR_REQUEST_MONGO_DB_NAME");
+        String connectionString = System.getenv("NOTICE_REQUEST_MONGODB_CONN_STRING");
+        String databaseName = System.getenv("NOTICE_REQUEST_MONGO_DB_NAME");
         String collectionName = System.getenv("NOTICE_ERR_REQUEST_MONGO_COLLECTION_NAME");
 
 
@@ -34,8 +34,14 @@ public class PaymentNoticeGenerationRequestErrorClientImpl implements PaymentNot
         CodecRegistry pojoCodecRegistry = fromRegistries(getDefaultCodecRegistry(),
                 fromProviders(pojoCodecProvider));
         MongoClient mongoClient = MongoClients.create(connectionString);
-        MongoDatabase database = mongoClient.getDatabase(databaseName)
-                .withCodecRegistry(pojoCodecRegistry);
+        MongoDatabase database;
+        try {
+            database = mongoClient.getDatabase(databaseName)
+                    .withCodecRegistry(pojoCodecRegistry);
+        } catch (Exception e) {
+            mongoClient.close();
+            throw e;
+        }
         mongoCollection = database.getCollection(collectionName, PaymentNoticeGenerationRequestError.class);
 
     }
@@ -45,7 +51,7 @@ public class PaymentNoticeGenerationRequestErrorClientImpl implements PaymentNot
     }
 
     public static PaymentNoticeGenerationRequestErrorClientImpl getInstance() {
-        if (instance == null) {
+        if(instance == null) {
             instance = new PaymentNoticeGenerationRequestErrorClientImpl();
         }
 
