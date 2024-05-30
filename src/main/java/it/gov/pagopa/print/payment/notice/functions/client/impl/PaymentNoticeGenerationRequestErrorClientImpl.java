@@ -34,8 +34,14 @@ public class PaymentNoticeGenerationRequestErrorClientImpl implements PaymentNot
         CodecRegistry pojoCodecRegistry = fromRegistries(getDefaultCodecRegistry(),
                 fromProviders(pojoCodecProvider));
         MongoClient mongoClient = MongoClients.create(connectionString);
-        MongoDatabase database = mongoClient.getDatabase(databaseName)
-                .withCodecRegistry(pojoCodecRegistry);
+        MongoDatabase database;
+        try {
+            database = mongoClient.getDatabase(databaseName)
+                    .withCodecRegistry(pojoCodecRegistry);
+        } catch (Exception e) {
+            mongoClient.close();
+            throw e;
+        }
         mongoCollection = database.getCollection(collectionName, PaymentNoticeGenerationRequestError.class);
 
     }
@@ -45,7 +51,7 @@ public class PaymentNoticeGenerationRequestErrorClientImpl implements PaymentNot
     }
 
     public static PaymentNoticeGenerationRequestErrorClientImpl getInstance() {
-        if (instance == null) {
+        if(instance == null) {
             instance = new PaymentNoticeGenerationRequestErrorClientImpl();
         }
 
