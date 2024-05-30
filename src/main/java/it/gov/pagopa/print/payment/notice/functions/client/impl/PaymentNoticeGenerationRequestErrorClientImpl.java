@@ -25,8 +25,8 @@ public class PaymentNoticeGenerationRequestErrorClientImpl implements PaymentNot
     private final MongoCollection<PaymentNoticeGenerationRequestError> mongoCollection;
 
     private PaymentNoticeGenerationRequestErrorClientImpl() {
-        String connectionString = System.getenv("NOTICE_ERR_REQUEST_MONGODB_CONN_STRING");
-        String databaseName = System.getenv("NOTICE_ERR_REQUEST_MONGO_DB_NAME");
+        String connectionString = System.getenv("NOTICE_REQUEST_MONGODB_CONN_STRING");
+        String databaseName = System.getenv("NOTICE_REQUEST_MONGO_DB_NAME");
         String collectionName = System.getenv("NOTICE_ERR_REQUEST_MONGO_COLLECTION_NAME");
 
 

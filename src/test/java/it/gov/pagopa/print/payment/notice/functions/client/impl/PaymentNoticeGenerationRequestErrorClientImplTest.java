@@ -44,8 +44,8 @@ class PaymentNoticeGenerationRequestErrorClientImplTest {
         withEnvironmentVariables(
                 "NOTICE_REQUEST_MONGO_DB_NAME", "personDB",
                 "NOTICE_REQUEST_MONGODB_CONN_STRING", "mongodb://localhost:27017/personDB",
-                "NOTICE_REQUEST_MONGO_COLLECTION_NAME", "notice"
-        ).execute(() -> Assertions.assertDoesNotThrow(PaymentNoticeGenerationRequestClientImpl::getInstance));
+                "NOTICE_ERR_REQUEST_MONGO_COLLECTION_NAME", "notice-errors"
+        ).execute(() -> Assertions.assertDoesNotThrow(PaymentNoticeGenerationRequestErrorClientImpl::getInstance));
     }
 
     @Test

@@ -91,7 +91,6 @@ public class NoticeFolderServiceImpl implements NoticeFolderService {
             return paymentNoticeGenerationRequestClient.findById(id).orElseThrow(
                     () -> new RuntimeException("Error on folder recovery"));
         } catch (Exception e) {
-            logger.error(e.getMessage(), e);
             throw new RequestRecoveryException(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR.value());
         }
     }

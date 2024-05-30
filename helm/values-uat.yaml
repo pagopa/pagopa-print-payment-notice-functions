@@ -76,6 +76,7 @@ microservice-chart:
     OTEL_TRACES_SAMPLER: "always_on"
     NOTICE_REQUEST_MONGO_DB_NAME: "noticesMongoDb"
     NOTICE_REQUEST_MONGO_COLLECTION_NAME: "payment_notice_generation_request"
+    NOTICE_ERR_REQUEST_MONGO_COLLECTION_NAME: "payment_notice_generation_request_error"
     BLOB_STORAGE_CONTAINER_NAME: "notices"
     BLOB_STORAGE_ACCOUNT_ENDPOINT: "https://pagopauprintitnotices.blob.core.windows.net"
   envSecret:
