@@ -76,7 +76,7 @@ microservice-chart:
     NOTICE_REQUEST_MONGO_DB_NAME: "noticesMongoDb"
     NOTICE_REQUEST_MONGO_COLLECTION_NAME: "payment_notice_generation_request"
     BLOB_STORAGE_CONTAINER_NAME: "notices"
-    BLOB_STORAGE_ACCOUNT_ENDPOINT: "https://pagopaprintitnotices.blob.core.windows.net"
+    BLOB_STORAGE_ACCOUNT_ENDPOINT: "https://pagopapprintitnotices.blob.core.windows.net"
   envSecret:
     # required
     APPLICATIONINSIGHTS_CONNECTION_STRING: 'app-insight-connection-string'
