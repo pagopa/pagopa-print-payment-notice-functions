@@ -63,6 +63,7 @@ microservice-chart:
           value: "75"
   envConfig:
     WEBSITE_SITE_NAME: 'print-payment-notice-functions' # required to show cloud role name in application insights
+    FUNCTIONS_WORKER_RUNTIME: "java"
     ENV: 'azure-dev'
     APP_LOGGING_LEVEL: 'DEBUG'
     DEFAULT_LOGGING_LEVEL: 'INFO'
@@ -82,6 +83,7 @@ microservice-chart:
     APPLICATIONINSIGHTS_CONNECTION_STRING: 'app-insight-connection-string'
     OTEL_EXPORTER_OTLP_HEADERS: 'elastic-apm-secret-token'
     NOTICE_EVENTHUB_CONN_STRING: 'ehub-d-notice-connection-string'
+    AzureWebJobsStorage: 'ehub-d-notice-connection-string'
     NOTICE_ERR_EVENTHUB_CONN_STRING: 'ehub-d-notice-errors-connection-string'
     NOTICE_COMPLETE_EVENTHUB_CONN_STRING: 'ehub-d-notice-complete-connection-string'
     NOTICE_REQUEST_MONGODB_CONN_STRING: 'notices-mongo-connection-string'

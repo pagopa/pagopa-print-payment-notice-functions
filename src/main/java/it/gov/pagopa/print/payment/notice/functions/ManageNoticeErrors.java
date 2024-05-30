@@ -88,7 +88,7 @@ public class ManageNoticeErrors {
             PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError = null;
             try {
                 paymentNoticeGenerationRequestError =
-                        paymentNoticeGenerationRequestErrorClient.findOne(error.getFolderId()).orElseThrow(() ->
+                        paymentNoticeGenerationRequestErrorClient.findOne(error.getId()).orElseThrow(() ->
                                 new PaymentNoticeManagementException("Request error not found",
                                         HttpStatus.INTERNAL_SERVER_ERROR.value()));
             } catch (Exception e) {
@@ -110,8 +110,6 @@ public class ManageNoticeErrors {
                                     it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequest
                                             .builder()
                                     .id(paymentNoticeGenerationRequest.getId())
-                                    .numberOfElementsProcessed(paymentNoticeGenerationRequest
-                                            .getNumberOfElementsProcessed())
                                     .numberOfElementsTotal(paymentNoticeGenerationRequest
                                             .getNumberOfElementsTotal())
                                     .numberOfElementsFailed(paymentNoticeGenerationRequest

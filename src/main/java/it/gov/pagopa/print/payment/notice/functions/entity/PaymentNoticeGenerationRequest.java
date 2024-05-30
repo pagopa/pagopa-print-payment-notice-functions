@@ -25,8 +25,6 @@ public class PaymentNoticeGenerationRequest {
 
     private List<String> items;
 
-    private Integer numberOfElementsProcessed;
-
     private Integer numberOfElementsFailed;
 
     private Integer numberOfElementsTotal;

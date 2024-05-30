@@ -4,6 +4,7 @@ import com.microsoft.azure.functions.ExecutionContext;
 import it.gov.pagopa.print.payment.notice.functions.client.PaymentNoticeGenerationRequestErrorClient;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentGenerationRequestStatus;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentNoticeGenerationRequest;
+import it.gov.pagopa.print.payment.notice.functions.entity.PaymentNoticeGenerationRequestError;
 import it.gov.pagopa.print.payment.notice.functions.exception.RequestRecoveryException;
 import it.gov.pagopa.print.payment.notice.functions.exception.SaveNoticeToBlobException;
 import it.gov.pagopa.print.payment.notice.functions.model.notice.NoticeGenerationRequestItem;
@@ -63,11 +64,16 @@ class ManageNoticeErrorsTest {
                                .id("test")
                                .folderId("test")
                        .build());
-        doReturn(Optional.of(paymentNoticeGenerationRequestErrors.get(0)))
+        doReturn(Optional.of(PaymentNoticeGenerationRequestError.builder().compressionError(true)
+                        .folderId("test")
+                        .id("test")
+                        .numberOfAttempts(0)
+                        .compressionError(true)
+                .build()))
                 .when(paymentNoticeGenerationRequestErrorClient)
                 .findOne(any());
         doReturn(PaymentNoticeGenerationRequest.builder()
-                .status(PaymentGenerationRequestStatus.COMPLETING).numberOfElementsProcessed(1)
+                .status(PaymentGenerationRequestStatus.COMPLETING)
                 .numberOfElementsTotal(2).numberOfElementsFailed(1).build())
                 .when(noticeFolderService).findRequest(any());
         List<NoticeRequestEH> eventsToRetry = new ArrayList<>();
@@ -104,7 +110,12 @@ class ManageNoticeErrorsTest {
                             .build());
             List<NoticeRequestEH> eventsToRetry = new ArrayList<>();
 
-            doReturn(Optional.of(paymentNoticeGenerationRequestErrors.get(0)))
+            doReturn(Optional.of(PaymentNoticeGenerationRequestError.builder().compressionError(true)
+                    .folderId("test")
+                    .id("test")
+                    .numberOfAttempts(0)
+                    .compressionError(false)
+                    .build()))
                     .when(paymentNoticeGenerationRequestErrorClient)
                     .findOne(any());
 

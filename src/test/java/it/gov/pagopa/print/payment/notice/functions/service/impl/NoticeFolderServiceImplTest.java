@@ -51,7 +51,8 @@ public class NoticeFolderServiceImplTest  {
         BlobStorageResponse blobStorageResponse = new BlobStorageResponse();
         blobStorageResponse.setStatusCode(200);
         when(paymentNoticeBlobClient.compressFolder(any())).thenReturn(blobStorageResponse);
-        assertDoesNotThrow(() -> noticeFolderService.manageFolder(PaymentNoticeGenerationRequest.builder().build()));
+        assertDoesNotThrow(() -> noticeFolderService.manageFolder(PaymentNoticeGenerationRequest.builder()
+                .numberOfElementsFailed(0).build()));
         verify(paymentNoticeBlobClient).compressFolder(any());
         verify(paymentNoticeGenerationRequestClient).updatePaymentGenerationRequest(any());
     }

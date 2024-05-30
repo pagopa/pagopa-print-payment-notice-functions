@@ -46,7 +46,7 @@ class ManagePaymentNoticeFolderUpdatesTest {
                 paymentNoticeGenerationRequestList =
                 Collections.singletonList(
                         it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequest.builder()
-                        .status(PaymentGenerationRequestStatus.COMPLETING).numberOfElementsProcessed(1)
+                        .status(PaymentGenerationRequestStatus.COMPLETING).items(Collections.singletonList("test"))
                         .numberOfElementsTotal(2).numberOfElementsFailed(1).build());
         List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestError>
                 paymentNoticeGenerationRequestErrors = new ArrayList<>();
@@ -63,7 +63,7 @@ class ManagePaymentNoticeFolderUpdatesTest {
                 Collections.singletonList(
                         it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequest.builder()
                         .status(PaymentGenerationRequestStatus.COMPLETING).numberOfElementsTotal(2)
-                        .numberOfElementsProcessed(1).numberOfElementsFailed(0).build());
+                                .items(Collections.singletonList("test")).numberOfElementsFailed(0).build());
         List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestError>
                 paymentNoticeGenerationRequestErrors = new ArrayList<>();
         assertDoesNotThrow(() -> sut.processGenerateReceipt(paymentNoticeGenerationRequestList,
@@ -78,7 +78,7 @@ class ManagePaymentNoticeFolderUpdatesTest {
                 paymentNoticeGenerationRequestList =
                 Collections.singletonList(it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequest.builder()
                         .status(PaymentGenerationRequestStatus.COMPLETING).numberOfElementsTotal(2)
-                        .numberOfElementsProcessed(1).numberOfElementsFailed(1).build());
+                        .items(Collections.singletonList("test")).numberOfElementsFailed(1).build());
         List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestError>
                 paymentNoticeGenerationRequestErrors = new ArrayList<>();
         doAnswer(item -> {

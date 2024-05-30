@@ -65,7 +65,7 @@ public class ManagePaymentNoticeFolderUpdates {
         paymentNoticeComplete.stream().filter(item -> (
 
                 Objects.equals(
-                        item.getNumberOfElementsProcessed() + item.getNumberOfElementsFailed(),
+                        item.getItems().size() + item.getNumberOfElementsFailed(),
                         item.getNumberOfElementsTotal()) &&
                         PaymentGenerationRequestStatus.COMPLETING.equals(item.getStatus()))
                 ).forEach(item -> {
@@ -75,7 +75,6 @@ public class ManagePaymentNoticeFolderUpdates {
                                 PaymentNoticeGenerationRequest.builder()
                                         .id(item.getId())
                                         .userId(item.getUserId())
-                                        .numberOfElementsProcessed(item.getNumberOfElementsProcessed())
                                         .numberOfElementsFailed(item.getNumberOfElementsFailed())
                                         .numberOfElementsTotal(item.getNumberOfElementsTotal())
                                         .items(item.getItems())
