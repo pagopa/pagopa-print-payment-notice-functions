@@ -14,7 +14,7 @@ on:
 
 env:
   NAMESPACE: printit
-  APP_NAME: pagopa_print_payment_notice_functions
+  APP_NAME: print-payment-notice-functions
 
 permissions:
   id-token: write
