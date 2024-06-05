@@ -4,7 +4,7 @@ microservice-chart:
   fullnameOverride: "print-payment-notice-functions"
   image:
     repository: ghcr.io/pagopa/pagopa-print-payment-notice-functions
-    tag: "0.0.1-1-feat-update-functions"
+    tag: "0.0.4"
     pullPolicy: Always
   livenessProbe:
     httpGet:
@@ -63,7 +63,7 @@ microservice-chart:
           value: "75"
   envConfig:
     WEBSITE_SITE_NAME: 'print-payment-notice-functions' # required to show cloud role name in application insights
-    FUNCTIONS_WORKER_RUNTIME: "java"
+    FUNCTIONS_WORKER_RUNTIME: 'java'
     ENV: 'azure-dev'
     APP_LOGGING_LEVEL: 'DEBUG'
     DEFAULT_LOGGING_LEVEL: 'INFO'
@@ -84,11 +84,11 @@ microservice-chart:
     APPLICATIONINSIGHTS_CONNECTION_STRING: 'app-insight-connection-string'
     OTEL_EXPORTER_OTLP_HEADERS: 'elastic-apm-secret-token'
     NOTICE_EVENTHUB_CONN_STRING: 'ehub-d-notice-connection-string'
-    AzureWebJobsStorage: 'ehub-d-notice-connection-string'
+    AzureWebJobsStorage: 'notices-storage-account-connection-string'
     NOTICE_ERR_EVENTHUB_CONN_STRING: 'ehub-d-notice-errors-connection-string'
     NOTICE_COMPLETE_EVENTHUB_CONN_STRING: 'ehub-d-notice-complete-connection-string'
     NOTICE_REQUEST_MONGODB_CONN_STRING: 'notices-mongo-connection-string'
-    NOTICE_STORAGE_CONN_STRING: 'notices-storage-account-connection-string'
+    BLOB_STORAGE_CONN_STRING: 'notices-storage-account-connection-string'
     AES_SECRET_KEY: 'aes-key'
     AES_SALT: 'aes-salt'
   keyvault:
@@ -124,3 +124,8 @@ microservice-chart:
         pullPolicy: Always
       envConfig: {}
       envSecret: {}
+#  helm upgrade --namespace printit \
+#  --install --values ./helm/values-dev.yaml \
+#  --debug \
+#  --wait --timeout 5m0s \
+#  print-payment-notice-functions ./helm

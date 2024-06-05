@@ -39,8 +39,14 @@ public class PaymentNoticeGenerationRequestClientImpl implements PaymentNoticeGe
             createClient();
         }
         try {
-            MongoDatabase database = mongoClient.getDatabase(databaseName)
+            MongoDatabase database;
+        try {
+            database = mongoClient.getDatabase(databaseName)
                     .withCodecRegistry(pojoCodecRegistry);
+        } catch (Exception e) {
+            mongoClient.close();
+            throw e;
+        }
             return database.getCollection(collectionName, PaymentNoticeGenerationRequest.class);
         } catch (Exception e) {
             mongoClient.close();
@@ -58,7 +64,7 @@ public class PaymentNoticeGenerationRequestClientImpl implements PaymentNoticeGe
     }
 
     public static PaymentNoticeGenerationRequestClientImpl getInstance() {
-        if (instance == null) {
+        if(instance == null) {
             instance = new PaymentNoticeGenerationRequestClientImpl();
         }
 

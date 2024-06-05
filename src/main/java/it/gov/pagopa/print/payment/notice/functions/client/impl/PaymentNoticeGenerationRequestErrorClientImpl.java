@@ -46,8 +46,14 @@ public class PaymentNoticeGenerationRequestErrorClientImpl implements PaymentNot
             createClient();
         }
         try {
-            MongoDatabase database = mongoClient.getDatabase(databaseName)
+            MongoDatabase database;
+        try {
+            database = mongoClient.getDatabase(databaseName)
                     .withCodecRegistry(pojoCodecRegistry);
+        } catch (Exception e) {
+            mongoClient.close();
+            throw e;
+        }
             return database.getCollection(collectionName, PaymentNoticeGenerationRequestError.class);
         } catch (Exception e) {
             mongoClient.close();
@@ -57,7 +63,7 @@ public class PaymentNoticeGenerationRequestErrorClientImpl implements PaymentNot
     }
 
     public static PaymentNoticeGenerationRequestErrorClientImpl getInstance() {
-        if (instance == null) {
+        if(instance == null) {
             instance = new PaymentNoticeGenerationRequestErrorClientImpl();
         }
 
