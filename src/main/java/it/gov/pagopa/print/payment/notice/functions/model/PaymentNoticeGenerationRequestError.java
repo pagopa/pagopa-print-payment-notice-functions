@@ -20,6 +20,8 @@ public class PaymentNoticeGenerationRequestError {
 
     private String errorDescription;
 
+    private String createdAt;
+
     private String data;
 
     private Integer numberOfAttempts;

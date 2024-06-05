@@ -79,6 +79,7 @@ microservice-chart:
     NOTICE_ERR_REQUEST_MONGO_COLLECTION_NAME: "payment_notice_generation_request_error"
     BLOB_STORAGE_CONTAINER_NAME: "notices"
     BLOB_STORAGE_ACCOUNT_ENDPOINT: "https://pagopapprintitnotices.blob.core.windows.net"
+    MAX_RETRIES_ON_ERRORS: "3"
   envSecret:
     # required
     APPLICATIONINSIGHTS_CONNECTION_STRING: 'app-insight-connection-string'

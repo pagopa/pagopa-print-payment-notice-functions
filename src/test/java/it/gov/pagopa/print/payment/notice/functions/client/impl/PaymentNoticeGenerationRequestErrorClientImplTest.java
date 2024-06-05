@@ -1,12 +1,17 @@
 package it.gov.pagopa.print.payment.notice.functions.client.impl;
 
 import com.mongodb.client.FindIterable;
+import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.result.InsertOneResult;
 import it.gov.pagopa.print.payment.notice.functions.client.impl.PaymentNoticeGenerationRequestClientImpl;
 import it.gov.pagopa.print.payment.notice.functions.client.impl.PaymentNoticeGenerationRequestErrorClientImpl;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentGenerationRequestStatus;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentNoticeGenerationRequest;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentNoticeGenerationRequestError;
+import org.bson.BsonString;
+import org.bson.BsonValue;
 import org.bson.conversions.Bson;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,13 +35,24 @@ class PaymentNoticeGenerationRequestErrorClientImplTest {
     @Mock
     public MongoCollection mongoCollection;
 
+    @Mock
+    public MongoClient mongoClient;
+
+    @Mock
+    public MongoDatabase mongoDatabase;
+
     PaymentNoticeGenerationRequestErrorClientImpl paymentNoticeGenerationRequestClient;
 
     @BeforeEach
     public void init() {
-        reset(mongoCollection);
+        reset(mongoClient, mongoDatabase, mongoCollection);
+        mongoClient = Mockito.mock(MongoClient.class);
+        mongoDatabase = Mockito.mock(MongoDatabase.class);
+        lenient().when(mongoClient.getDatabase(any())).thenReturn(mongoDatabase);
+        lenient().when(mongoDatabase.withCodecRegistry(any())).thenReturn(mongoDatabase);
+        lenient().when(mongoDatabase.getCollection(any(),any())).thenReturn(mongoCollection);
         paymentNoticeGenerationRequestClient =
-                new PaymentNoticeGenerationRequestErrorClientImpl(mongoCollection);
+                new PaymentNoticeGenerationRequestErrorClientImpl(mongoClient);
     }
 
     @Test
@@ -50,8 +66,9 @@ class PaymentNoticeGenerationRequestErrorClientImplTest {
 
     @Test
     void shouldExecuteUpdateWithoutExceptions() throws IOException {
+
         assertDoesNotThrow(() ->
-                new PaymentNoticeGenerationRequestErrorClientImpl(Mockito.mock(MongoCollection.class))
+                paymentNoticeGenerationRequestClient
                 .updatePaymentGenerationRequestError(
                 PaymentNoticeGenerationRequestError.builder()
                         .build()));
@@ -72,8 +89,22 @@ class PaymentNoticeGenerationRequestErrorClientImplTest {
     @Test
     void shouldExecuteDeleteWithoutExceptions() {
         assertDoesNotThrow(() ->
-                new PaymentNoticeGenerationRequestErrorClientImpl(Mockito.mock(MongoCollection.class))
+                paymentNoticeGenerationRequestClient
                         .deleteRequestError("test"));
+    }
+
+    @Test
+    void shouldExecuteSaveWithoutExceptions() throws IOException {
+        InsertOneResult insertOneResult = Mockito.mock(InsertOneResult.class);
+        BsonValue bsonValue = Mockito.mock(BsonValue.class);
+        doReturn(mock(BsonString.class)).when(bsonValue).asString();
+        doReturn(bsonValue).when(insertOneResult).getInsertedId();
+        doReturn(insertOneResult).when(mongoCollection).insertOne(any());
+        assertDoesNotThrow(() ->
+                paymentNoticeGenerationRequestClient
+                        .save(
+                                PaymentNoticeGenerationRequestError.builder()
+                                        .build()));
     }
 
 }
