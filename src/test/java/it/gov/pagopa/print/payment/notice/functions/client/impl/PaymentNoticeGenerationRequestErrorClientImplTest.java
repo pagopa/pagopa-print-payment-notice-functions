@@ -4,11 +4,14 @@ import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.result.InsertOneResult;
 import it.gov.pagopa.print.payment.notice.functions.client.impl.PaymentNoticeGenerationRequestClientImpl;
 import it.gov.pagopa.print.payment.notice.functions.client.impl.PaymentNoticeGenerationRequestErrorClientImpl;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentGenerationRequestStatus;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentNoticeGenerationRequest;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentNoticeGenerationRequestError;
+import org.bson.BsonString;
+import org.bson.BsonValue;
 import org.bson.conversions.Bson;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -88,6 +91,20 @@ class PaymentNoticeGenerationRequestErrorClientImplTest {
         assertDoesNotThrow(() ->
                 paymentNoticeGenerationRequestClient
                         .deleteRequestError("test"));
+    }
+
+    @Test
+    void shouldExecuteSaveWithoutExceptions() throws IOException {
+        InsertOneResult insertOneResult = Mockito.mock(InsertOneResult.class);
+        BsonValue bsonValue = Mockito.mock(BsonValue.class);
+        doReturn(mock(BsonString.class)).when(bsonValue).asString();
+        doReturn(bsonValue).when(insertOneResult).getInsertedId();
+        doReturn(insertOneResult).when(mongoCollection).insertOne(any());
+        assertDoesNotThrow(() ->
+                paymentNoticeGenerationRequestClient
+                        .save(
+                                PaymentNoticeGenerationRequestError.builder()
+                                        .build()));
     }
 
 }

@@ -8,7 +8,6 @@ import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Updates;
 import it.gov.pagopa.print.payment.notice.functions.client.PaymentNoticeGenerationRequestErrorClient;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentNoticeGenerationRequestError;
-import org.bson.codecs.configuration.CodecProvider;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.codecs.pojo.PojoCodecProvider;
 
@@ -82,6 +81,13 @@ public class PaymentNoticeGenerationRequestErrorClientImpl implements PaymentNot
     @Override
     public void deleteRequestError(String id) {
         getMongoCollection().deleteOne(Filters.eq("folderId", id));
+    }
+
+    @Override
+    public String save(
+            PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError) {
+        return getMongoCollection().insertOne(paymentNoticeGenerationRequestError)
+                .getInsertedId().asString().getValue();
     }
 
 }

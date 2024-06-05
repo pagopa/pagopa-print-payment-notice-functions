@@ -1,17 +1,23 @@
 package it.gov.pagopa.print.payment.notice.functions;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.microsoft.azure.functions.ExecutionContext;
+import com.microsoft.azure.functions.OutputBinding;
 import com.microsoft.azure.functions.annotation.Cardinality;
 import com.microsoft.azure.functions.annotation.EventHubOutput;
 import com.microsoft.azure.functions.annotation.EventHubTrigger;
 import com.microsoft.azure.functions.annotation.FunctionName;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentGenerationRequestStatus;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentNoticeGenerationRequest;
+import it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestError;
 import it.gov.pagopa.print.payment.notice.functions.service.NoticeFolderService;
 import it.gov.pagopa.print.payment.notice.functions.service.impl.NoticeFolderServiceImpl;
+import it.gov.pagopa.print.payment.notice.functions.utils.ObjectMapperUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -59,37 +65,43 @@ public class ManagePaymentNoticeFolderUpdates {
                     name = "PaymentNoticeErrors",
                     eventHubName = "", // blank because the value is included in the connection string
                     connection = "NOTICE_ERR_EVENTHUB_CONN_STRING")
-            List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestError> errors,
-            final ExecutionContext context) {
+            OutputBinding<
+                    List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestError>
+                    > errors,
+            final ExecutionContext context) throws JsonProcessingException {
+                    logger.info(ObjectMapperUtils.writeValueAsString(paymentNoticeComplete));
 
-        paymentNoticeComplete.stream().filter(item -> (
+                    List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestError>
+                            errorMsgList = new ArrayList<>();
 
-                Objects.equals(
-                        item.getItems().size() + item.getNumberOfElementsFailed(),
-                        item.getNumberOfElementsTotal()) &&
-                        PaymentGenerationRequestStatus.COMPLETING.equals(item.getStatus()))
-                ).forEach(item -> {
+                    paymentNoticeComplete.stream().filter(item ->
+                            item.getStatus().equals(PaymentGenerationRequestStatus.COMPLETING) &&
+                            (item.getItems().size() + item.getNumberOfElementsFailed() >=
+                                    item.getNumberOfElementsTotal())
+                    ).forEach(item -> {
 
-                    try {
-                        noticeFolderService.manageFolder(
-                                PaymentNoticeGenerationRequest.builder()
-                                        .id(item.getId())
-                                        .userId(item.getUserId())
-                                        .numberOfElementsFailed(item.getNumberOfElementsFailed())
-                                        .numberOfElementsTotal(item.getNumberOfElementsTotal())
-                                        .items(item.getItems())
-                                        .status(item.getStatus())
-                                .build());
-                    } catch (Exception e) {
-                        logger.error("[{}] error managing notice request with id {}",
-                                context.getFunctionName(), item.getId(), e);
-                        errors.add(it.gov.pagopa.print.payment.notice.functions.model
-                                .PaymentNoticeGenerationRequestError.builder()
-                                        .folderId(item.getId())
-                                        .numberOfAttempts(0)
-                                        .compressionError(true)
-                                .build());
-                    }
+                        try {
+                            noticeFolderService.manageFolder(
+                                    PaymentNoticeGenerationRequest.builder()
+                                            .id(item.getId())
+                                            .userId(item.getUserId())
+                                            .numberOfElementsFailed(item.getNumberOfElementsFailed())
+                                            .numberOfElementsTotal(item.getNumberOfElementsTotal())
+                                            .items(item.getItems())
+                                            .status(item.getStatus())
+                                    .build());
+                        } catch (Exception e) {
+                            logger.error("[{}] error managing notice request with id {}",
+                                    context.getFunctionName(), item.getId(), e);
+                            errorMsgList.add(it.gov.pagopa.print.payment.notice.functions.model
+                                    .PaymentNoticeGenerationRequestError.builder()
+                                            .folderId(item.getId())
+                                            .numberOfAttempts(0)
+                                            .compressionError(true)
+                                    .build());
+                        }
+
+                        errors.setValue(errorMsgList);
 
                 });
 

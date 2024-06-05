@@ -22,6 +22,10 @@ public class PaymentNoticeGenerationRequest {
 
     private List<String> items;
 
+    private String createdAt;
+
+    private String requestDate;
+
     private Integer numberOfElementsFailed;
 
     private Integer numberOfElementsTotal;
