@@ -140,7 +140,8 @@ public class ManageNoticeErrors {
 
         });
 
-
+        noticesToRetry.setValue(noticeRequestEHS);
+        completionToRetry.setValue(paymentNoticeGenerationRequestList);
 
     }
 
