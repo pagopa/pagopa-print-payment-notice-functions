@@ -4,6 +4,7 @@ package it.gov.pagopa.print.payment.notice.functions;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.microsoft.azure.functions.ExecutionContext;
 import com.microsoft.azure.functions.HttpStatus;
+import com.microsoft.azure.functions.OutputBinding;
 import com.microsoft.azure.functions.annotation.*;
 import it.gov.pagopa.print.payment.notice.functions.client.PaymentNoticeGenerationRequestErrorClient;
 import it.gov.pagopa.print.payment.notice.functions.client.impl.PaymentNoticeGenerationRequestErrorClientImpl;
@@ -21,6 +22,7 @@ import it.gov.pagopa.print.payment.notice.functions.utils.ObjectMapperUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -77,36 +79,59 @@ public class ManageNoticeErrors {
                     name = "PaymentNoticeRequest",
                     eventHubName = "", // blank because the value is included in the connection string
                     connection = "NOTICE_EVENTHUB_CONN_STRING")
-            List<NoticeRequestEH> noticesToRetry,
+            OutputBinding<List<NoticeRequestEH>> noticesToRetry,
             @EventHubOutput(
                     name = "PaymentNoticeComplete",
                     eventHubName = "", // blank because the value is included in the connection string
                     connection = "NOTICE_COMPLETE_EVENTHUB_CONN_STRING")
-            List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequest> completionToRetry,
+            OutputBinding<List<it.gov.pagopa.print.payment.notice.functions.model
+                    .PaymentNoticeGenerationRequest>> completionToRetry,
             final ExecutionContext context) {
+
+        List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequest>
+                paymentNoticeGenerationRequestList =
+                new ArrayList<>();
+        List<NoticeRequestEH>
+                noticeRequestEHS =
+                new ArrayList<>();
 
         paymentNoticeErrors.forEach(error -> {
 
             PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError = null;
-            try {
-                paymentNoticeGenerationRequestError =
-                        paymentNoticeGenerationRequestErrorClient.findOne(error.getId()).orElseThrow(() ->
-                                new PaymentNoticeManagementException("Request error not found",
-                                        HttpStatus.INTERNAL_SERVER_ERROR.value()));
-            } catch (Exception e) {
-                logger.error(ERROR_STRING,
-                        context.getFunctionName(), error.getFolderId(), e);
-            }
+                try {
+                    if (error.getId() != null) {
+
+                        paymentNoticeGenerationRequestError =
+                                paymentNoticeGenerationRequestErrorClient.findOne(error.getId()).orElseThrow(() ->
+                                        new PaymentNoticeManagementException("Request error not found",
+                                                HttpStatus.INTERNAL_SERVER_ERROR.value()));
+                    } else {
+                        paymentNoticeGenerationRequestError = PaymentNoticeGenerationRequestError.builder()
+                                .folderId(error.getFolderId())
+                                .numberOfAttempts(error.getNumberOfAttempts())
+                                .compressionError(error.isCompressionError())
+                                .data(error.getData())
+                                .errorCode(error.getErrorCode())
+                                .errorDescription(error.getErrorDescription())
+                                .build();
+                        paymentNoticeGenerationRequestError.setId(
+                                paymentNoticeGenerationRequestErrorClient.save(paymentNoticeGenerationRequestError));
+                    }
+                } catch (Exception e) {
+                    logger.error(ERROR_STRING,
+                            context.getFunctionName(), error.getFolderId(), e);
+                }
+
 
             if (paymentNoticeGenerationRequestError != null &&
                     error.getNumberOfAttempts() < maxRetriesOnErrors) {
 
                 if (error.isCompressionError() &&
                         !"UNKNOWN".equals(paymentNoticeGenerationRequestError.getFolderId())) {
-                    addRequestsToRetry(completionToRetry, context, error, paymentNoticeGenerationRequestError);
+                    addRequestsToRetry(paymentNoticeGenerationRequestList, context, error, paymentNoticeGenerationRequestError);
                 } else {
 
-                    addToNoticesToRetry(noticesToRetry, context, error, paymentNoticeGenerationRequestError);
+                    addToNoticesToRetry(noticeRequestEHS, context, error, paymentNoticeGenerationRequestError);
                 }
 
                 updateError(context, paymentNoticeGenerationRequestError);
@@ -114,6 +139,8 @@ public class ManageNoticeErrors {
             }
 
         });
+
+
 
     }
 

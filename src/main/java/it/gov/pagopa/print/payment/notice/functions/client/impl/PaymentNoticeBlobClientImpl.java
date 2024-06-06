@@ -6,9 +6,12 @@ import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
 import com.azure.storage.blob.models.ListBlobsOptions;
 import com.microsoft.azure.functions.HttpStatus;
+import it.gov.pagopa.print.payment.notice.functions.ManageNoticeErrors;
 import it.gov.pagopa.print.payment.notice.functions.client.PaymentNoticeBlobClient;
 import it.gov.pagopa.print.payment.notice.functions.model.response.BlobStorageResponse;
 import lombok.SneakyThrows;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -23,6 +26,8 @@ import java.util.zip.ZipOutputStream;
  * Client for the Blob Storage regarding notices
  */
 public class PaymentNoticeBlobClientImpl implements PaymentNoticeBlobClient {
+
+    private final Logger logger = LoggerFactory.getLogger(ManageNoticeErrors.class);
 
     private static PaymentNoticeBlobClientImpl instance;
 
@@ -70,33 +75,36 @@ public class PaymentNoticeBlobClientImpl implements PaymentNoticeBlobClient {
 
             String delimiter = "/";
             ListBlobsOptions options = new ListBlobsOptions()
-                    .setPrefix(folderId);
+                    .setPrefix(folderId.concat("/"));
 
 
             blobContainerClient.listBlobsByHierarchy(delimiter, options, null)
                     .stream().forEach(blobItem -> {
-                final BlobClient blobClient = blobContainerClient.getBlobClient(blobItem.getName());
 
-                final String[] splitName = blobItem.getName().split(delimiter,2);
-                final String finalSingleFileName = splitName.length > 1 ? splitName[1] : splitName[0];
-                final String finalSingleFilepath = blobItem.getName();
+                if (!blobItem.isPrefix() && blobItem.getName().contains(".pdf")) {
+                    final BlobClient blobClient = blobContainerClient.getBlobClient(blobItem.getName());
 
-                CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
-                    try (ByteArrayOutputStream fileOutputStream = new ByteArrayOutputStream()) {
-                        if (blobClient.exists()) {
-                            blobClient.downloadStream(fileOutputStream);
-                            zipStream.putNextEntry(new ZipEntry(finalSingleFileName));
-                            zipStream.write(fileOutputStream.toByteArray());
-                            zipStream.closeEntry();
-                        } else {
-                            throw new RuntimeException("File not found: " + finalSingleFilepath);
+                    final String[] splitName = blobItem.getName().split(delimiter, 2);
+                    final String finalSingleFileName = splitName.length > 1 ? splitName[1] : splitName[0];
+                    final String finalSingleFilepath = blobItem.getName();
+
+                    CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+                        try (ByteArrayOutputStream fileOutputStream = new ByteArrayOutputStream()) {
+                            if (blobClient.exists()) {
+                                blobClient.downloadStream(fileOutputStream);
+                                zipStream.putNextEntry(new ZipEntry(finalSingleFileName));
+                                zipStream.write(fileOutputStream.toByteArray());
+                                zipStream.closeEntry();
+                            } else {
+                                throw new RuntimeException("File not found: " + finalSingleFilepath);
+                            }
+                        } catch (IOException e) {
+                            throw new RuntimeException("Error processing file: " + finalSingleFileName, e);
                         }
-                    } catch (IOException e) {
-                        throw new RuntimeException("Error processing file: " + finalSingleFileName, e);
-                    }
-                });
+                    });
 
-                futures.add(future);
+                    futures.add(future);
+                }
             });
 
             CompletableFuture<Void> allOf = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
