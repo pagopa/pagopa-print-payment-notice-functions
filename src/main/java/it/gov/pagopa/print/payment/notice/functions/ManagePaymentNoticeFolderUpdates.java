@@ -96,6 +96,7 @@ public class ManagePaymentNoticeFolderUpdates {
                             errorMsgList.add(it.gov.pagopa.print.payment.notice.functions.model
                                     .PaymentNoticeGenerationRequestError.builder()
                                             .folderId(item.getId())
+                                            .errorId(item.getId())
                                             .numberOfAttempts(0)
                                             .compressionError(true)
                                     .build());
