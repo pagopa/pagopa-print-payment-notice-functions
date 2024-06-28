@@ -108,6 +108,7 @@ public class ManageNoticeErrors {
                     } else {
                         paymentNoticeGenerationRequestError = PaymentNoticeGenerationRequestError.builder()
                                 .folderId(error.getFolderId())
+                                .errorId(error.getErrorId())
                                 .numberOfAttempts(error.getNumberOfAttempts())
                                 .compressionError(error.isCompressionError())
                                 .data(error.getData())

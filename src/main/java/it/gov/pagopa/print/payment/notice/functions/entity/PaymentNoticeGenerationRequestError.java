@@ -8,13 +8,15 @@ import java.time.Instant;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@EqualsAndHashCode(of = "folderId")
+@EqualsAndHashCode(of = "errorId")
 @ToString
 public class PaymentNoticeGenerationRequestError {
 
     private String id;
 
     private String folderId;
+    
+    private String errorId;
 
     private Instant createdAt;
 
