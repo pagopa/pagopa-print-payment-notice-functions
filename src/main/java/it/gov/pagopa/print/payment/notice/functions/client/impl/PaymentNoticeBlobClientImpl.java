@@ -43,6 +43,7 @@ public class PaymentNoticeBlobClientImpl implements PaymentNoticeBlobClient {
                 .endpoint(storageAccount)
                 .connectionString(connectionString)
                 .buildClient();
+
     }
 
     PaymentNoticeBlobClientImpl(BlobServiceClient serviceClient) {
@@ -68,55 +69,59 @@ public class PaymentNoticeBlobClientImpl implements PaymentNoticeBlobClient {
 
         BlobContainerClient blobContainerClient = blobServiceClient.getBlobContainerClient(containerName);
 
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-
-        try (ZipOutputStream zipStream = new ZipOutputStream(outputStream)) {
-            List<CompletableFuture<Void>> futures = new ArrayList<>();
-
-            String delimiter = "/";
-            ListBlobsOptions options = new ListBlobsOptions()
-                    .setPrefix(folderId.concat("/"));
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
 
 
-            blobContainerClient.listBlobsByHierarchy(delimiter, options, null)
-                    .stream().forEach(blobItem -> {
+            try (ZipOutputStream zipStream = new ZipOutputStream(outputStream)) {
+                List<CompletableFuture<Void>> futures = new ArrayList<>();
 
-                if (!blobItem.isPrefix() && blobItem.getName().contains(".pdf")) {
-                    final BlobClient blobClient = blobContainerClient.getBlobClient(blobItem.getName());
+                String delimiter = "/";
+                ListBlobsOptions options = new ListBlobsOptions()
+                        .setPrefix(folderId.concat("/"));
 
-                    final String[] splitName = blobItem.getName().split(delimiter, 2);
-                    final String finalSingleFileName = splitName.length > 1 ? splitName[1] : splitName[0];
-                    final String finalSingleFilepath = blobItem.getName();
 
-                    CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
-                        try (ByteArrayOutputStream fileOutputStream = new ByteArrayOutputStream()) {
-                            if (blobClient.exists()) {
-                                blobClient.downloadStream(fileOutputStream);
-                                zipStream.putNextEntry(new ZipEntry(finalSingleFileName));
-                                zipStream.write(fileOutputStream.toByteArray());
-                                zipStream.closeEntry();
-                            } else {
-                                throw new RuntimeException("File not found: " + finalSingleFilepath);
+                blobContainerClient.listBlobsByHierarchy(delimiter, options, null)
+                        .stream().forEach(blobItem -> {
+
+                            if (!blobItem.isPrefix() && blobItem.getName().contains(".pdf")) {
+                                final BlobClient blobClient = blobContainerClient.getBlobClient(blobItem.getName());
+
+                                final String[] splitName = blobItem.getName().split(delimiter, 2);
+                                final String finalSingleFileName = splitName.length > 1 ? splitName[1] : splitName[0];
+                                final String finalSingleFilepath = blobItem.getName();
+
+                                CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+                                    try (ByteArrayOutputStream fileOutputStream = new ByteArrayOutputStream()) {
+                                        if (blobClient.exists()) {
+                                            blobClient.downloadStream(fileOutputStream);
+                                            zipStream.putNextEntry(new ZipEntry(finalSingleFileName));
+                                            zipStream.write(fileOutputStream.toByteArray());
+                                            zipStream.closeEntry();
+                                        } else {
+                                            throw new RuntimeException("File not found: " + finalSingleFilepath);
+                                        }
+                                    } catch (IOException e) {
+                                        throw new RuntimeException("Error processing file: " + finalSingleFileName, e);
+                                    }
+                                });
+
+                                futures.add(future);
+
                             }
-                        } catch (IOException e) {
-                            throw new RuntimeException("Error processing file: " + finalSingleFileName, e);
-                        }
-                    });
+                        });
 
-                    futures.add(future);
-                }
-            });
+                CompletableFuture<Void> allOf = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+                allOf.join();
+            } catch (IOException e) {
+                throw new RuntimeException("Error creating zip file", e);
+            }
 
-            CompletableFuture<Void> allOf = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
-            allOf.join();
-        } catch (IOException e) {
-            throw new RuntimeException("Error creating zip file", e);
+            BlobClient zipFileClient = blobContainerClient.getBlobClient(
+                    folderId + "/" + folderId.concat(".zip"));
+            zipFileClient.upload(new ByteArrayInputStream(
+                    outputStream.toByteArray()), outputStream.size(), true);
+
         }
-
-        BlobClient zipFileClient = blobContainerClient.getBlobClient(
-                folderId + "/" + folderId.concat(".zip"));
-        zipFileClient.upload(new ByteArrayInputStream(
-                outputStream.toByteArray()), outputStream.size(), true);
 
         BlobStorageResponse blobStorageResponse = new BlobStorageResponse();
         blobStorageResponse.setStatusCode(HttpStatus.OK.value());
