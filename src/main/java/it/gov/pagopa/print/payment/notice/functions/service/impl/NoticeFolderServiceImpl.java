@@ -42,8 +42,9 @@ public class NoticeFolderServiceImpl implements NoticeFolderService {
     }
 
     /**
-     * Method to managed a folder in completion, calling the related services for compression,
+     * Method to manage a folder in completion, calling the related services for compression,
      * if successful it will delete related errors
+     *
      * @param paymentNoticeGenerationRequest data to use as input for folder management
      * @throws SaveNoticeToBlobException
      */
@@ -54,12 +55,13 @@ public class NoticeFolderServiceImpl implements NoticeFolderService {
         try {
             BlobStorageResponse response = paymentNoticeBlobClient
                     .compressFolder(paymentNoticeGenerationRequest.getId());
-            if (response.getStatusCode() != HttpStatus.OK.value()) {
+            if(response.getStatusCode() != HttpStatus.OK.value()) {
                 throw new SaveNoticeToBlobException("Couldn't create the compressed file",
                         response.getStatusCode());
             }
+            logger.info("created compressed file {} for User {}", paymentNoticeGenerationRequest.getId(), paymentNoticeGenerationRequest.getUserId());
         } catch (SaveNoticeToBlobException e) {
-            logger.error(e.getMessage(), e);
+            logger.error("Error during save into blob. Request {} for User {}. Cause: {}", paymentNoticeGenerationRequest.getId(), paymentNoticeGenerationRequest.getUserId(), e.getMessage(), e);
             throw e;
         }
 
@@ -70,17 +72,18 @@ public class NoticeFolderServiceImpl implements NoticeFolderService {
             paymentNoticeGenerationRequestClient
                     .updatePaymentGenerationRequest(paymentNoticeGenerationRequest);
             paymentNoticeGenerationRequestErrorClient.deleteRequestError(paymentNoticeGenerationRequest.getId());
+            logger.info("set status {}. Request {} for User {}", paymentNoticeGenerationRequest.getStatus(), paymentNoticeGenerationRequest.getId(), paymentNoticeGenerationRequest.getUserId());
         } catch (Exception e) {
-            logger.error(e.getMessage(), e);
+            logger.error("Error during setting the status. Request {} for User {}. Cause: {}", paymentNoticeGenerationRequest.getId(), paymentNoticeGenerationRequest.getUserId(), e.getMessage(), e);
             throw e;
         }
-
 
 
     }
 
     /**
      * Finds an existing request using the folder id
+     *
      * @param id folder id to use
      * @return instance of a notice generation request
      * @throws RequestRecoveryException
