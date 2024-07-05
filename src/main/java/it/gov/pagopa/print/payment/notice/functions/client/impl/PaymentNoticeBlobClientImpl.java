@@ -81,40 +81,42 @@ public class PaymentNoticeBlobClientImpl implements PaymentNoticeBlobClient {
 
 
                 blobContainerClient.listBlobsByHierarchy(delimiter, options, null)
-                        .stream().forEach(blobItem -> {
+                        .stream()
+                        .forEach(blobItem -> {
 
                             if(!blobItem.isPrefix() && blobItem.getName().contains(".pdf")) {
-                                logger.info("Get blob client. Request {}", folderId);
+                                logger.info("Get info file {} from blob. Request {}", blobItem.getName(), folderId);
                                 final BlobClient blobClient = blobContainerClient.getBlobClient(blobItem.getName());
 
                                 final String[] splitName = blobItem.getName().split(delimiter, 2);
                                 final String finalSingleFileName = splitName.length > 1 ? splitName[1] : splitName[0];
                                 final String finalSingleFilepath = blobItem.getName();
 
-                                CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
-                                    try (ByteArrayOutputStream fileOutputStream = new ByteArrayOutputStream()) {
-                                        if(blobClient.exists()) {
-                                            blobClient.downloadStream(fileOutputStream);
-                                            zipStream.putNextEntry(new ZipEntry(finalSingleFileName));
-                                            zipStream.write(fileOutputStream.toByteArray());
-                                            zipStream.closeEntry();
-                                        } else {
-                                            throw new RuntimeException("File not found: " + finalSingleFilepath);
-                                        }
-                                    } catch (IOException e) {
-                                        throw new RuntimeException("Error processing file: " + finalSingleFileName, e);
+//                                CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+                                try (ByteArrayOutputStream fileOutputStream = new ByteArrayOutputStream()) {
+                                    if(blobClient.exists()) {
+                                        blobClient.downloadStream(fileOutputStream);
+                                        zipStream.putNextEntry(new ZipEntry(finalSingleFileName));
+                                        zipStream.write(fileOutputStream.toByteArray());
+                                        zipStream.closeEntry();
+                                    } else {
+                                        logger.error("file not found: {}", finalSingleFileName);
+                                        throw new RuntimeException("File not found: " + finalSingleFilepath);
                                     }
-                                    logger.info("Download completed. Request {}", folderId);
+                                } catch (IOException e) {
+                                    logger.error("Error processing file {}", finalSingleFileName, e);
+                                    throw new RuntimeException("Error processing file: " + finalSingleFileName, e);
+                                }
+                                logger.info("Download file completed. Request {}", folderId);
+//                                });
 
-                                });
-
-                                futures.add(future);
+//                                futures.add(future);
 
                             }
                         });
 
-                CompletableFuture<Void> allOf = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
-                allOf.join();
+//                CompletableFuture<Void> allOf = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+//                allOf.join();
             } catch (IOException e) {
                 throw new RuntimeException("Error creating zip file", e);
             }
@@ -123,7 +125,7 @@ public class PaymentNoticeBlobClientImpl implements PaymentNoticeBlobClient {
                     folderId + "/" + folderId.concat(".zip"));
             zipFileClient.upload(new ByteArrayInputStream(
                     outputStream.toByteArray()), outputStream.size(), true);
-
+            logger.info("Zip file uploaded. Request {}", folderId);
         }
 
         BlobStorageResponse blobStorageResponse = new BlobStorageResponse();
