@@ -95,6 +95,7 @@ public class PaymentNoticeBlobClientImpl implements PaymentNoticeBlobClient {
 //                                CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
                                 try (ByteArrayOutputStream fileOutputStream = new ByteArrayOutputStream()) {
                                     if(blobClient.exists()) {
+                                        logger.info("put file {} into zipStream. Request {}", blobItem.getName(), folderId);
                                         blobClient.downloadStream(fileOutputStream);
                                         zipStream.putNextEntry(new ZipEntry(finalSingleFileName));
                                         zipStream.write(fileOutputStream.toByteArray());
