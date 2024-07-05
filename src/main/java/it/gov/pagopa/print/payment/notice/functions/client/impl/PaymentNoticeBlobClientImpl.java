@@ -27,10 +27,8 @@ import java.util.zip.ZipOutputStream;
  */
 public class PaymentNoticeBlobClientImpl implements PaymentNoticeBlobClient {
 
-    private final Logger logger = LoggerFactory.getLogger(ManageNoticeErrors.class);
-
     private static PaymentNoticeBlobClientImpl instance;
-
+    private final Logger logger = LoggerFactory.getLogger(ManageNoticeErrors.class);
     private final String containerName = System.getenv("BLOB_STORAGE_CONTAINER_NAME");
 
     private final BlobServiceClient blobServiceClient;
@@ -51,7 +49,7 @@ public class PaymentNoticeBlobClientImpl implements PaymentNoticeBlobClient {
     }
 
     public static PaymentNoticeBlobClientImpl getInstance() {
-        if (instance == null) {
+        if(instance == null) {
             instance = new PaymentNoticeBlobClientImpl();
         }
 
@@ -61,11 +59,13 @@ public class PaymentNoticeBlobClientImpl implements PaymentNoticeBlobClient {
     /**
      * Using the provided id it will attempt to recover the folder data,
      * compressing
+     *
      * @param folderId
      * @return
      */
     @SneakyThrows
     public BlobStorageResponse compressFolder(String folderId) {
+        logger.info("Create Zip file. Request {}", folderId);
 
         BlobContainerClient blobContainerClient = blobServiceClient.getBlobContainerClient(containerName);
 
@@ -83,7 +83,8 @@ public class PaymentNoticeBlobClientImpl implements PaymentNoticeBlobClient {
                 blobContainerClient.listBlobsByHierarchy(delimiter, options, null)
                         .stream().forEach(blobItem -> {
 
-                            if (!blobItem.isPrefix() && blobItem.getName().contains(".pdf")) {
+                            if(!blobItem.isPrefix() && blobItem.getName().contains(".pdf")) {
+                                logger.info("Get blob client. Request {}", folderId);
                                 final BlobClient blobClient = blobContainerClient.getBlobClient(blobItem.getName());
 
                                 final String[] splitName = blobItem.getName().split(delimiter, 2);
@@ -92,7 +93,7 @@ public class PaymentNoticeBlobClientImpl implements PaymentNoticeBlobClient {
 
                                 CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
                                     try (ByteArrayOutputStream fileOutputStream = new ByteArrayOutputStream()) {
-                                        if (blobClient.exists()) {
+                                        if(blobClient.exists()) {
                                             blobClient.downloadStream(fileOutputStream);
                                             zipStream.putNextEntry(new ZipEntry(finalSingleFileName));
                                             zipStream.write(fileOutputStream.toByteArray());
@@ -103,6 +104,8 @@ public class PaymentNoticeBlobClientImpl implements PaymentNoticeBlobClient {
                                     } catch (IOException e) {
                                         throw new RuntimeException("Error processing file: " + finalSingleFileName, e);
                                     }
+                                    logger.info("Download completed. Request {}", folderId);
+
                                 });
 
                                 futures.add(future);
