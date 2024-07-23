@@ -11,6 +11,7 @@ import it.gov.pagopa.print.payment.notice.functions.entity.PaymentNoticeGenerati
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.codecs.pojo.PojoCodecProvider;
 
+import java.util.Objects;
 import java.util.Optional;
 
 import static com.mongodb.MongoClientSettings.getDefaultCodecRegistry;
@@ -26,38 +27,26 @@ public class PaymentNoticeGenerationRequestErrorClientImpl implements PaymentNot
             fromProviders(PojoCodecProvider.builder().automatic(true).build()));
 
 
-    private PaymentNoticeGenerationRequestErrorClientImpl() {
-        createClient();
-    }
+    private PaymentNoticeGenerationRequestErrorClientImpl() {}
 
-    private static void createClient() {
+    private static MongoClient createClient() {
         String connectionString = System.getenv("NOTICE_REQUEST_MONGODB_CONN_STRING");
-        mongoClient = MongoClients.create(connectionString);
+        return mongoClient != null ? mongoClient : MongoClients.create(connectionString);
     }
 
     PaymentNoticeGenerationRequestErrorClientImpl(MongoClient mongoClient) {
         this.mongoClient = mongoClient;
     }
 
-    public MongoCollection<PaymentNoticeGenerationRequestError> getMongoCollection() {
+    public MongoCollection<PaymentNoticeGenerationRequestError> getMongoCollection(MongoClient mongoClient) {
         String databaseName = System.getenv("NOTICE_REQUEST_MONGO_DB_NAME");
         String collectionName = System.getenv("NOTICE_ERR_REQUEST_MONGO_COLLECTION_NAME");
-        if (mongoClient == null) {
-            createClient();
-        }
         try {
-            MongoDatabase database;
-        try {
-            database = mongoClient.getDatabase(databaseName)
+            MongoDatabase database = mongoClient.getDatabase(databaseName)
                     .withCodecRegistry(pojoCodecRegistry);
-        } catch (Exception e) {
-            mongoClient.close();
-            throw e;
-        }
             return database.getCollection(collectionName, PaymentNoticeGenerationRequestError.class);
         } catch (Exception e) {
             mongoClient.close();
-            mongoClient = null;
             throw new RuntimeException("Error recovering db", e);
         }
     }
@@ -73,27 +62,36 @@ public class PaymentNoticeGenerationRequestErrorClientImpl implements PaymentNot
     @Override
     public void updatePaymentGenerationRequestError(
             PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError) {
-        getMongoCollection().updateOne(Filters.eq("_id",
-                        paymentNoticeGenerationRequestError.getId()),
-                Updates.inc("numberOfAttempts", 1));
+        try (MongoClient mongoClient = createClient()) {
+            getMongoCollection(mongoClient).updateOne(Filters.eq("_id",
+                            paymentNoticeGenerationRequestError.getId()),
+                    Updates.inc("numberOfAttempts", 1));
+        }
     }
 
     @Override
     public Optional<PaymentNoticeGenerationRequestError> findOne(String folderId) {
-        return Optional.ofNullable(getMongoCollection().find(
-                Filters.eq("folderId", folderId)).first());
+        try (MongoClient mongoClient = createClient()) {
+            return Optional.ofNullable(getMongoCollection(mongoClient).find(
+                    Filters.eq("folderId", folderId)).first());
+        }
     }
 
     @Override
     public void deleteRequestError(String id) {
-        getMongoCollection().deleteOne(Filters.eq("folderId", id));
+        try (MongoClient mongoClient = createClient()) {
+            getMongoCollection(mongoClient).deleteOne(Filters.eq("folderId", id));
+        }
     }
 
     @Override
     public String save(
             PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError) {
-        return getMongoCollection().insertOne(paymentNoticeGenerationRequestError)
-                .getInsertedId().asString().getValue();
+        try (MongoClient mongoClient = createClient()) {
+            return Objects.requireNonNull(getMongoCollection(mongoClient).insertOne(
+                            paymentNoticeGenerationRequestError)
+                    .getInsertedId()).asString().getValue();
+        }
     }
 
 }
