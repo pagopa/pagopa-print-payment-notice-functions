@@ -1,74 +1,56 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
+    <springProfile name="!default">
+        <conversionRule conversionWord="clr" converterClass="org.springframework.boot.logging.logback.ColorConverter"/>
+        <conversionRule conversionWord="wex"
+                        converterClass="org.springframework.boot.logging.logback.WhitespaceThrowableProxyConverter"/>
+        <conversionRule conversionWord="wEx"
+                        converterClass="org.springframework.boot.logging.logback.ExtendedWhitespaceThrowableProxyConverter"/>
 
-    <property resource="application.properties" />
+        <appender name="stdout" class="ch.qos.logback.core.ConsoleAppender">
+            <layout class="ch.qos.logback.classic.PatternLayout">
+                <Pattern>
+                    %clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%5p) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m %clr(%mdc){magenta}%n%wEx
+                </Pattern>
+            </layout>
+        </appender>
 
-    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
-            <level>${CONSOLE_LOG_THRESHOLD}</level>
-        </filter>
-        <encoder>
-            <pattern>${CONSOLE_LOG_PATTERN}</pattern>
-            <charset>${CONSOLE_LOG_CHARSET}</charset>
-        </encoder>
-    </appender>
+        <root level="INFO">
+            <appender-ref ref="stdout"/>
+        </root>
+    </springProfile>
 
-    <if condition='"TRUE".equalsIgnoreCase("${ENABLE_ECS_CONSOLE}")'>
-        <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <springProfile name="default">
+        <springProperty name="ECS_SERVICE_VERSION" source="info.application.version"/>
+
+        <conversionRule conversionWord="clr" converterClass="org.springframework.boot.logging.logback.ColorConverter"/>
+        <conversionRule conversionWord="wex"
+                        converterClass="org.springframework.boot.logging.logback.WhitespaceThrowableProxyConverter"/>
+        <conversionRule conversionWord="wEx"
+                        converterClass="org.springframework.boot.logging.logback.ExtendedWhitespaceThrowableProxyConverter"/>
+
+        <appender name="stdout" class="ch.qos.logback.core.ConsoleAppender">
             <encoder class="co.elastic.logging.logback.EcsEncoder">
-                <serviceName>${name}</serviceName>
-                <serviceVersion>${version}</serviceVersion>
+                <serviceName>${OTEL_SERVICE_NAME}</serviceName>
+                <serviceVersion>${ECS_SERVICE_VERSION}</serviceVersion>
                 <serviceEnvironment>${ENV}</serviceEnvironment>
             </encoder>
         </appender>
-    </if>
 
-    <appender name="ASYNC_STDOUT"
-              class="ch.qos.logback.classic.AsyncAppender">
-        <neverBlock>true</neverBlock>
-        <queueSize>20000</queueSize>
-        <discardingThreshold>0</discardingThreshold>
-        <appender-ref ref="STDOUT"/>
-    </appender>
+        <appender name="log_file" class="ch.qos.logback.core.FileAppender">
+            <file>./logs/${OTEL_SERVICE_NAME}.log</file>
+            <append>true</append>
+            <layout class="ch.qos.logback.classic.PatternLayout">
+                <Pattern>
+                    %clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%5p) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m %clr(%mdc){magenta}%n%wEx
+                </Pattern>
+            </layout>
+        </appender>
 
-    <appender name="ASYNC_FILE" class="ch.qos.logback.core.helpers.NOPAppender"/>
-    <if condition='"TRUE".equalsIgnoreCase("${ENABLE_FILE_APPENDER}")'>
-        <then>
-            <property name="LOG_FILE"
-                      value="${LOG_FILE:-${LOG_PATH:-${LOG_TEMP:-${java.io.tmpdir:-/tmp}}}/logback.log}"/>
-
-            <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-                <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
-                    <level>${FILE_LOG_THRESHOLD}</level>
-                </filter>
-                <encoder>
-                    <pattern>${FILE_LOG_PATTERN}</pattern>
-                    <charset>${FILE_LOG_CHARSET}</charset>
-                </encoder>
-                <file>${LOG_FILE}</file>
-                <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-                    <fileNamePattern>${LOGBACK_ROLLINGPOLICY_FILE_NAME_PATTERN:-${LOG_FILE}.%d{yyyy-MM-dd}.%i.gz}</fileNamePattern>
-                    <cleanHistoryOnStart>${LOGBACK_ROLLINGPOLICY_CLEAN_HISTORY_ON_START:-false}</cleanHistoryOnStart>
-                    <maxFileSize>${LOGBACK_ROLLINGPOLICY_MAX_FILE_SIZE:-10MB}</maxFileSize>
-                    <totalSizeCap>${LOGBACK_ROLLINGPOLICY_TOTAL_SIZE_CAP:-0}</totalSizeCap>
-                    <maxHistory>${LOGBACK_ROLLINGPOLICY_MAX_HISTORY:-7}</maxHistory>
-                </rollingPolicy>
-            </appender>
-
-            <appender name="ASYNC_FILE"
-                      class="ch.qos.logback.classic.AsyncAppender">
-                <neverBlock>true</neverBlock>
-                <queueSize>20000</queueSize>
-                <discardingThreshold>0</discardingThreshold>
-                <appender-ref ref="FILE"/>
-            </appender>
-
-        </then>
-    </if>
-
-    <root level="INFO">
-        <appender-ref ref="ASYNC_STDOUT" />
-        <appender-ref ref="ASYNC_FILE" />
-    </root>
+        <root level="INFO">
+            <appender-ref ref="stdout"/>
+            <appender-ref ref="log_file"/>
+        </root>
+    </springProfile>
 
 </configuration>
