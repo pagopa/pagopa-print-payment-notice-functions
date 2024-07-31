@@ -10,14 +10,14 @@ microservice-chart:
     httpGet:
       path: /health
       port: 80
-    initialDelaySeconds: 150
+    initialDelaySeconds: 210
     failureThreshold: 6
     periodSeconds: 10
   readinessProbe:
     httpGet:
       path: /health
       port: 80
-    initialDelaySeconds: 150
+    initialDelaySeconds: 210
     failureThreshold: 6
     periodSeconds: 10
   deployment:
