@@ -1,6 +1,7 @@
 package it.gov.pagopa.print.payment.notice.functions.entity;
 
 import lombok.*;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
 import java.util.List;
@@ -11,6 +12,7 @@ import java.util.List;
 @AllArgsConstructor
 @EqualsAndHashCode(of = "id")
 @ToString
+@Document("payment_notice_generation_request_error")
 public class PaymentNoticeGenerationRequest {
 
     private String id;
