@@ -5,7 +5,7 @@
 
     <groupId>it.gov.pagopa</groupId>
     <artifactId>print-payment-notice-functions</artifactId>
-    <version>0.0.11-sequencial</version>
+    <version>0.0.16</version>
     <packaging>jar</packaging>
 
     <name>pagopa-print-payment-notice-functions</name>
@@ -319,5 +319,14 @@
                 </executions>
             </plugin>
         </plugins>
-    </build>
+
+        <resources>
+            <resource>
+                <directory>src/main/resources-filtered</directory>
+                <filtering>true</filtering>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+        </resources>    </build>
 </project>

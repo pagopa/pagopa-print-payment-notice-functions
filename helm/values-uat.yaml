@@ -4,20 +4,20 @@ microservice-chart:
   fullnameOverride: "print-payment-notice-functions"
   image:
     repository: ghcr.io/pagopa/pagopa-print-payment-notice-functions
-    tag: "0.0.11-sequencial"
+    tag: "0.0.16"
     pullPolicy: Always
   livenessProbe:
     httpGet:
       path: /health
       port: 80
-    initialDelaySeconds: 150
+    initialDelaySeconds: 210
     failureThreshold: 6
     periodSeconds: 10
   readinessProbe:
     httpGet:
       path: /health
       port: 80
-    initialDelaySeconds: 150
+    initialDelaySeconds: 210
     failureThreshold: 6
     periodSeconds: 10
   deployment:
@@ -26,12 +26,13 @@ microservice-chart:
     create: true
     type: ClusterIP
     ports:
-      - 8080
+      - 80 #http
+      - 12345 #jmx-exporter
   ingress:
     create: true
     host: "printit.itn.internal.uat.platform.pagopa.it"
     path: /pagopa-print-payment-notice-functions/(.*)
-    servicePort: 8080
+    servicePort: 80
   serviceAccount:
     create: false
     annotations: {}
@@ -47,12 +48,12 @@ microservice-chart:
       memory: "512Mi"
       cpu: "0.25"
     limits:
-      memory: "512Mi"
-      cpu: "0.25"
+      memory: "1024Mi"
+      cpu: "0.5"
   autoscaling:
     enable: true
-    minReplica: 1
-    maxReplica: 1
+    minReplica: 3
+    maxReplica: 10
     pollingInterval: 10 # seconds
     cooldownPeriod: 50 # seconds
     triggers:
