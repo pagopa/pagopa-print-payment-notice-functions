@@ -1,5 +1,6 @@
-package it.gov.pagopa.print.payment.notice.functions.model.notice;
+package it.gov.pagopa.print.payment.notice.functions.events.model;
 
+import it.gov.pagopa.print.payment.notice.functions.model.notice.NoticeGenerationRequestItem;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -9,7 +10,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class NoticeRequestEH {
+public class GenerationEvent {
 
     private String folderId;
     private NoticeGenerationRequestItem noticeData;

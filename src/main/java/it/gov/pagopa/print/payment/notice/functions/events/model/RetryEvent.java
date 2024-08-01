@@ -1,4 +1,4 @@
-package it.gov.pagopa.print.payment.notice.functions.model;
+package it.gov.pagopa.print.payment.notice.functions.events.model;
 
 import lombok.*;
 
@@ -8,7 +8,7 @@ import lombok.*;
 @AllArgsConstructor
 @EqualsAndHashCode(of = "errorId")
 @ToString
-public class PaymentNoticeGenerationRequestErrorEH {
+public class RetryEvent {
 
     private String id;
 

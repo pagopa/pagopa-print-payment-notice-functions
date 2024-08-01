@@ -5,7 +5,7 @@ import lombok.*;
 import java.time.Instant;
 
 @Data
-@Builder
+@Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(of = "errorId")
@@ -15,7 +15,7 @@ public class PaymentNoticeGenerationRequestError {
     private String id;
 
     private String folderId;
-    
+
     private String errorId;
 
     private Instant createdAt;

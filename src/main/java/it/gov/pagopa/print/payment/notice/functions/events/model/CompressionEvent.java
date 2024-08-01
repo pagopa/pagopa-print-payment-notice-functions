@@ -1,4 +1,4 @@
-package it.gov.pagopa.print.payment.notice.functions.model;
+package it.gov.pagopa.print.payment.notice.functions.events.model;
 
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentGenerationRequestStatus;
 import lombok.*;
@@ -11,7 +11,8 @@ import java.util.List;
 @AllArgsConstructor
 @EqualsAndHashCode(of = "id")
 @ToString
-public class PaymentNoticeGenerationRequestEH {
+public class CompressionEvent {
+
 
     private String id;
 
