@@ -1,6 +1,6 @@
 package it.gov.pagopa.print.payment.notice.functions.events.producer;
 
-import it.gov.pagopa.print.payment.notice.functions.events.model.RetryEvent;
+import it.gov.pagopa.print.payment.notice.functions.events.model.ErrorEvent;
 
 /**
  * Interface to use when required to execute sending of a notice generation request through
@@ -14,6 +14,6 @@ public interface NoticeRequestErrorProducer {
      * @param paymentNoticeGenerationRequestError data to send
      * @return boolean referring if the insertion on the sending channel was successfully
      */
-    boolean sendErrorEvent(RetryEvent paymentNoticeGenerationRequestError);
+    boolean sendErrorEvent(ErrorEvent paymentNoticeGenerationRequestError);
 
 }

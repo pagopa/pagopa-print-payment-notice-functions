@@ -8,6 +8,7 @@ import it.gov.pagopa.print.payment.notice.functions.repository.PaymentGeneration
 import it.gov.pagopa.print.payment.notice.functions.repository.PaymentGenerationRequestRepository;
 import it.gov.pagopa.print.payment.notice.functions.storage.NoticeStorageClient;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -48,6 +49,7 @@ public class NoticeFolderService {
                 PaymentGenerationRequestStatus.PROCESSED);
         paymentGenerationRequestRepository.save(paymentNoticeGenerationRequest);
         paymentGenerationRequestErrorRepository.deleteById(paymentNoticeGenerationRequest.getId());
+        MDC.put("massiveStatus", paymentNoticeGenerationRequest.getStatus().toString());
         log.info("Massive Request {} [user {}]", paymentNoticeGenerationRequest.getStatus(), paymentNoticeGenerationRequest.getUserId());
     }
 

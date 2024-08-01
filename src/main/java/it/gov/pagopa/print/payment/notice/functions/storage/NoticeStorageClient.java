@@ -7,6 +7,7 @@ import com.azure.storage.blob.BlobServiceClientBuilder;
 import com.azure.storage.blob.models.ListBlobsOptions;
 import it.gov.pagopa.print.payment.notice.functions.model.response.BlobStorageResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -63,12 +64,15 @@ public class NoticeStorageClient {
                         .forEach(blobItem -> {
 
                             if (!blobItem.isPrefix() && blobItem.getName().contains(".pdf")) {
-                                log.info("Get info file {} from blob. Request {}", blobItem.getName(), folderId);
-                                final BlobClient blobClient = blobContainerClient.getBlobClient(blobItem.getName());
 
                                 final String[] splitName = blobItem.getName().split(delimiter, 2);
                                 final String finalSingleFileName = splitName.length > 1 ? splitName[1] : splitName[0];
                                 final String finalSingleFilepath = blobItem.getName();
+
+                                MDC.put("itemId", finalSingleFilepath);
+                                log.info("Get info file {} from blob. Request {}", blobItem.getName(), folderId);
+                                final BlobClient blobClient = blobContainerClient.getBlobClient(blobItem.getName());
+
 
 //                                CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
                                 try (ByteArrayOutputStream fileOutputStream = new ByteArrayOutputStream()) {

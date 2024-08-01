@@ -6,8 +6,8 @@ import it.gov.pagopa.print.payment.notice.functions.entity.PaymentGenerationRequ
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentNoticeGenerationRequest;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentNoticeGenerationRequestError;
 import it.gov.pagopa.print.payment.notice.functions.events.model.CompressionEvent;
+import it.gov.pagopa.print.payment.notice.functions.events.model.ErrorEvent;
 import it.gov.pagopa.print.payment.notice.functions.events.model.GenerationEvent;
-import it.gov.pagopa.print.payment.notice.functions.events.model.RetryEvent;
 import it.gov.pagopa.print.payment.notice.functions.events.producer.NoticeGenerationRequestProducer;
 import it.gov.pagopa.print.payment.notice.functions.events.producer.NoticeRequestCompleteProducer;
 import it.gov.pagopa.print.payment.notice.functions.exception.Aes256Exception;
@@ -43,12 +43,15 @@ public class RetryService {
     private NoticeRequestCompleteProducer noticeRequestCompleteProducer;
 
     @Autowired
+    private CompressionService compressionService;
+
+    @Autowired
     private PaymentGenerationRequestErrorRepository paymentGenerationRequestErrorRepository;
 
     public void retryError(String message) {
 
         try {
-            var retryMessage = objectMapper.readValue(message, RetryEvent.class);
+            var retryMessage = objectMapper.readValue(message, ErrorEvent.class);
 
             MDC.put("folderId", retryMessage.getFolderId());
             log.info("Starting Retry Function {}", retryMessage);
@@ -68,6 +71,8 @@ public class RetryService {
                 } else {
                     GenerationEvent generationEvent = buildNoticeRetry(retryMessage);
                     noticeGenerationRequestProducer.sendGenerationEvent(generationEvent);
+                    // TODO verify if it works instead send new event
+//                    compressionService.compressFolder(new ObjectMapper().writeValueAsString(generationEvent));
                     log.debug("Sent a new generation event");
                 }
             }
@@ -88,11 +93,11 @@ public class RetryService {
         log.debug("Updated Number Of Attempts");
     }
 
-    private boolean isCompressionError(RetryEvent retryMessage, PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError) {
+    private boolean isCompressionError(ErrorEvent retryMessage, PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError) {
         return retryMessage.isCompressionError() && !"UNKNOWN".equals(paymentNoticeGenerationRequestError.getFolderId());
     }
 
-    private PaymentNoticeGenerationRequestError findErrorOrCreate(RetryEvent retryMessage) throws PaymentNoticeManagementException {
+    private PaymentNoticeGenerationRequestError findErrorOrCreate(ErrorEvent retryMessage) throws PaymentNoticeManagementException {
         PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError;
         if (retryMessage.getId() != null) {
             paymentNoticeGenerationRequestError = paymentGenerationRequestErrorRepository.findById(retryMessage.getId())
@@ -113,7 +118,7 @@ public class RetryService {
         return paymentNoticeGenerationRequestError;
     }
 
-    private CompressionEvent buildCompressionError(RetryEvent error) throws RequestRecoveryException {
+    private CompressionEvent buildCompressionError(ErrorEvent error) throws RequestRecoveryException {
 
         PaymentNoticeGenerationRequest paymentNoticeGenerationRequest = noticeFolderService.findRequest(error.getId());
         if (paymentNoticeGenerationRequest.getStatus().equals(PaymentGenerationRequestStatus.COMPLETING)) {
@@ -133,7 +138,7 @@ public class RetryService {
 
     }
 
-    private GenerationEvent buildNoticeRetry(RetryEvent error) throws Aes256Exception, JsonProcessingException {
+    private GenerationEvent buildNoticeRetry(ErrorEvent error) throws Aes256Exception, JsonProcessingException {
         String plainRequestData = Aes256Utils.decrypt(error.getData());
         GenerationEvent noticeRequestEH = ObjectMapperUtils.mapString(plainRequestData, GenerationEvent.class);
         noticeRequestEH.setErrorId(error.getId());

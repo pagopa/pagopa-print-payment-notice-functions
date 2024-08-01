@@ -1,6 +1,6 @@
 package it.gov.pagopa.print.payment.notice.functions.events.producer;
 
-import it.gov.pagopa.print.payment.notice.functions.events.model.RetryEvent;
+import it.gov.pagopa.print.payment.notice.functions.events.model.ErrorEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.context.annotation.Bean;
@@ -22,13 +22,13 @@ public class NoticeRequestErrorProducerImpl implements NoticeRequestErrorProduce
         this.streamBridge = streamBridge;
     }
 
-    public static Message<RetryEvent> buildMessage(RetryEvent paymentNoticeGenerationRequestError) {
+    public static Message<ErrorEvent> buildMessage(ErrorEvent paymentNoticeGenerationRequestError) {
         return MessageBuilder.withPayload(paymentNoticeGenerationRequestError)
                 .build();
     }
 
     @Override
-    public boolean sendErrorEvent(RetryEvent paymentNoticeGenerationRequestError) {
+    public boolean sendErrorEvent(ErrorEvent paymentNoticeGenerationRequestError) {
         return streamBridge.send("noticeError-out-0",
                 buildMessage(paymentNoticeGenerationRequestError));
     }
@@ -41,7 +41,7 @@ public class NoticeRequestErrorProducerImpl implements NoticeRequestErrorProduce
     static class NoticeGenerationRequestErrorConfig {
 
         @Bean
-        public Supplier<Flux<Message<RetryEvent>>> sendErrorEvent() {
+        public Supplier<Flux<Message<ErrorEvent>>> sendErrorEvent() {
             return Flux::empty;
         }
 

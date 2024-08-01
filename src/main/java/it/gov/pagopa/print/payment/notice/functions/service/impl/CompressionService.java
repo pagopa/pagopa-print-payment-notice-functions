@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentGenerationRequestStatus;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentNoticeGenerationRequest;
 import it.gov.pagopa.print.payment.notice.functions.events.model.CompressionEvent;
-import it.gov.pagopa.print.payment.notice.functions.events.model.RetryEvent;
+import it.gov.pagopa.print.payment.notice.functions.events.model.ErrorEvent;
 import it.gov.pagopa.print.payment.notice.functions.events.producer.NoticeRequestCompleteProducer;
 import it.gov.pagopa.print.payment.notice.functions.events.producer.NoticeRequestErrorProducer;
 import lombok.extern.slf4j.Slf4j;
@@ -49,7 +49,7 @@ public class CompressionService {
                                     .status(compressionMessage.getStatus())
                                     .build());
                 } catch (Exception e) {
-                    var errorMsg = RetryEvent.builder()
+                    var errorMsg = ErrorEvent.builder()
                             .folderId(compressionMessage.getId())
                             .errorId(compressionMessage.getId())
                             .numberOfAttempts(0)

@@ -8,7 +8,7 @@ import lombok.*;
 @AllArgsConstructor
 @EqualsAndHashCode(of = "errorId")
 @ToString
-public class RetryEvent {
+public class ErrorEvent {
 
     private String id;
 

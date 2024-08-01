@@ -9,7 +9,7 @@ import java.util.function.Consumer;
 
 @Configuration
 @Slf4j
-public class RetryConsumerConfig {
+public class ErrorConsumerConfig {
     @Bean
     public Consumer<String> noticeError(RetryService retryService) {
         return retryService::retryError;
