@@ -3,7 +3,6 @@ package it.gov.pagopa.print.payment.notice.functions.model;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentGenerationRequestStatus;
 import lombok.*;
 
-import java.time.Instant;
 import java.util.List;
 
 @Data
@@ -12,7 +11,7 @@ import java.util.List;
 @AllArgsConstructor
 @EqualsAndHashCode(of = "id")
 @ToString
-public class PaymentNoticeGenerationRequest {
+public class PaymentNoticeGenerationRequestEH {
 
     private String id;
 

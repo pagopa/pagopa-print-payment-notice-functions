@@ -4,6 +4,8 @@ import com.microsoft.azure.functions.ExecutionContext;
 import com.microsoft.azure.functions.OutputBinding;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentGenerationRequestStatus;
 import it.gov.pagopa.print.payment.notice.functions.exception.SaveNoticeToBlobException;
+import it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestEH;
+import it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestErrorEH;
 import it.gov.pagopa.print.payment.notice.functions.service.NoticeFolderService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,54 +40,54 @@ class ManagePaymentNoticeFolderUpdatesTest {
 
     @Test
     void runOK() throws SaveNoticeToBlobException {
-        List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequest>
+        List<PaymentNoticeGenerationRequestEH>
                 paymentNoticeGenerationRequestList =
                 Collections.singletonList(
-                        it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequest.builder()
-                        .status(PaymentGenerationRequestStatus.COMPLETING).items(Collections.singletonList("test"))
-                        .numberOfElementsTotal(2).numberOfElementsFailed(1).build());
-        OutputBinding<List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestError>>
+                        PaymentNoticeGenerationRequestEH.builder()
+                                .status(PaymentGenerationRequestStatus.COMPLETING).items(Collections.singletonList("test"))
+                                .numberOfElementsTotal(2).numberOfElementsFailed(1).build());
+        OutputBinding<List<PaymentNoticeGenerationRequestErrorEH>>
                 paymentNoticeGenerationRequestErrors =
-                (OutputBinding<List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestError>>)
+                (OutputBinding<List<PaymentNoticeGenerationRequestErrorEH>>)
                         mock(OutputBinding.class);
         assertDoesNotThrow(() -> sut.processGenerateReceipt(paymentNoticeGenerationRequestList,
-                paymentNoticeGenerationRequestErrors,executionContextMock));
+                paymentNoticeGenerationRequestErrors, executionContextMock));
         verify(noticeFolderService).manageFolder(any());
     }
 
     @Test
     void runShouldIgnoreUnfinishedElements() throws SaveNoticeToBlobException {
-        List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequest>
-                paymentNoticeGenerationRequestList =
+        List<PaymentNoticeGenerationRequestEH>
+                paymentNoticeGenerationRequestEHList =
                 Collections.singletonList(
-                        it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequest.builder()
-                        .status(PaymentGenerationRequestStatus.COMPLETING).numberOfElementsTotal(2)
+                        PaymentNoticeGenerationRequestEH.builder()
+                                .status(PaymentGenerationRequestStatus.COMPLETING).numberOfElementsTotal(2)
                                 .items(Collections.singletonList("test")).numberOfElementsFailed(0).build());
-        OutputBinding<List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestError>>
+        OutputBinding<List<PaymentNoticeGenerationRequestErrorEH>>
                 paymentNoticeGenerationRequestErrors =
-                (OutputBinding<List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestError>>)
+                (OutputBinding<List<PaymentNoticeGenerationRequestErrorEH>>)
                         mock(OutputBinding.class);
-        assertDoesNotThrow(() -> sut.processGenerateReceipt(paymentNoticeGenerationRequestList,
-                paymentNoticeGenerationRequestErrors,executionContextMock));
+        assertDoesNotThrow(() -> sut.processGenerateReceipt(paymentNoticeGenerationRequestEHList,
+                paymentNoticeGenerationRequestErrors, executionContextMock));
         verifyNoInteractions(noticeFolderService);
     }
 
     @Test
     void runShouldSendErrorOnException() throws SaveNoticeToBlobException {
-        List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequest>
-                paymentNoticeGenerationRequestList =
-                Collections.singletonList(it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequest.builder()
+        List<PaymentNoticeGenerationRequestEH>
+                paymentNoticeGenerationRequestEHList =
+                Collections.singletonList(PaymentNoticeGenerationRequestEH.builder()
                         .status(PaymentGenerationRequestStatus.COMPLETING).numberOfElementsTotal(2)
                         .items(Collections.singletonList("test")).numberOfElementsFailed(1).build());
-        OutputBinding<List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestError>>
+        OutputBinding<List<PaymentNoticeGenerationRequestErrorEH>>
                 paymentNoticeGenerationRequestErrors =
-                (OutputBinding<List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestError>>)
+                (OutputBinding<List<PaymentNoticeGenerationRequestErrorEH>>)
                         mock(OutputBinding.class);
         doAnswer(item -> {
             throw new SaveNoticeToBlobException("Error", 500);
         }).when(noticeFolderService).manageFolder(any());
-        assertDoesNotThrow(() -> sut.processGenerateReceipt(paymentNoticeGenerationRequestList,
-                paymentNoticeGenerationRequestErrors,executionContextMock));
+        assertDoesNotThrow(() -> sut.processGenerateReceipt(paymentNoticeGenerationRequestEHList,
+                paymentNoticeGenerationRequestErrors, executionContextMock));
         verify(noticeFolderService).manageFolder(any());
     }
 

@@ -1,19 +1,11 @@
 package it.gov.pagopa.print.payment.notice.functions.client.impl;
 
-import com.azure.core.http.rest.PagedIterable;
-import com.azure.core.http.rest.Response;
-import com.azure.storage.blob.BlobClient;
-import com.azure.storage.blob.BlobContainerClient;
-import com.azure.storage.blob.BlobServiceClient;
-import com.azure.storage.blob.models.BlobItem;
-import com.microsoft.azure.functions.HttpStatus;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentGenerationRequestStatus;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentNoticeGenerationRequest;
-import it.gov.pagopa.print.payment.notice.functions.model.response.BlobStorageResponse;
 import org.bson.conversions.Bson;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,18 +16,15 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static uk.org.webcompere.systemstubs.SystemStubs.withEnvironmentVariables;
 
 @ExtendWith(MockitoExtension.class)
-class PaymentNoticeGenerationRequestClientImplTest {
+class PaymentNoticeGenerationRequestEHClientImplTest {
 
     @Mock
     public MongoCollection mongoCollection;
@@ -55,7 +44,7 @@ class PaymentNoticeGenerationRequestClientImplTest {
         mongoDatabase = Mockito.mock(MongoDatabase.class);
         lenient().when(mongoClient.getDatabase(any())).thenReturn(mongoDatabase);
         lenient().when(mongoDatabase.withCodecRegistry(any())).thenReturn(mongoDatabase);
-        lenient().when(mongoDatabase.getCollection(any(),any())).thenReturn(mongoCollection);
+        lenient().when(mongoDatabase.getCollection(any(), any())).thenReturn(mongoCollection);
         paymentNoticeGenerationRequestClient =
                 new PaymentNoticeGenerationRequestClientImpl(mongoClient);
     }
@@ -73,9 +62,9 @@ class PaymentNoticeGenerationRequestClientImplTest {
     void shouldExecuteUpdateWithoutExceptions() throws IOException {
         assertDoesNotThrow(() ->
                 paymentNoticeGenerationRequestClient
-                .updatePaymentGenerationRequest(
-                PaymentNoticeGenerationRequest.builder().status(PaymentGenerationRequestStatus.PROCESSED)
-                        .build()));
+                        .updatePaymentGenerationRequest(
+                                PaymentNoticeGenerationRequest.builder().status(PaymentGenerationRequestStatus.PROCESSED)
+                                        .build()));
     }
 
     @Test

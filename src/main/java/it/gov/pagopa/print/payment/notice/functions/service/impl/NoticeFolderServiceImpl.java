@@ -55,7 +55,7 @@ public class NoticeFolderServiceImpl implements NoticeFolderService {
         try {
             BlobStorageResponse response = paymentNoticeBlobClient
                     .compressFolder(paymentNoticeGenerationRequest.getId());
-            if(response.getStatusCode() != HttpStatus.OK.value()) {
+            if (response.getStatusCode() != HttpStatus.OK.value()) {
                 throw new SaveNoticeToBlobException("Couldn't create the compressed file",
                         response.getStatusCode());
             }
@@ -69,12 +69,12 @@ public class NoticeFolderServiceImpl implements NoticeFolderService {
             paymentNoticeGenerationRequest.setStatus(paymentNoticeGenerationRequest.getNumberOfElementsFailed() != 0 ?
                     PaymentGenerationRequestStatus.PROCESSED_WITH_FAILURES :
                     PaymentGenerationRequestStatus.PROCESSED);
-            paymentNoticeGenerationRequestClient
-                    .updatePaymentGenerationRequest(paymentNoticeGenerationRequest);
+            paymentNoticeGenerationRequestClient.updatePaymentGenerationRequest(paymentNoticeGenerationRequest);
             paymentNoticeGenerationRequestErrorClient.deleteRequestError(paymentNoticeGenerationRequest.getId());
-            logger.info("set status {}. Request {} for User {}", paymentNoticeGenerationRequest.getStatus(), paymentNoticeGenerationRequest.getId(), paymentNoticeGenerationRequest.getUserId());
+            logger.info("Massive Request {} [user {}]", paymentNoticeGenerationRequest.getStatus(), paymentNoticeGenerationRequest.getUserId());
+
         } catch (Exception e) {
-            logger.error("Error during setting the status. Request {} for User {}. Cause: {}", paymentNoticeGenerationRequest.getId(), paymentNoticeGenerationRequest.getUserId(), e.getMessage(), e);
+            logger.error("Exception Massive Request: during setting the status. Request {} for User {}. Cause: {}", paymentNoticeGenerationRequest.getId(), paymentNoticeGenerationRequest.getUserId(), e.getMessage(), e);
             throw e;
         }
 

@@ -9,11 +9,14 @@ import com.microsoft.azure.functions.annotation.EventHubTrigger;
 import com.microsoft.azure.functions.annotation.FunctionName;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentGenerationRequestStatus;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentNoticeGenerationRequest;
+import it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestEH;
+import it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestErrorEH;
 import it.gov.pagopa.print.payment.notice.functions.service.NoticeFolderService;
 import it.gov.pagopa.print.payment.notice.functions.service.impl.NoticeFolderServiceImpl;
 import it.gov.pagopa.print.payment.notice.functions.utils.ObjectMapperUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -57,25 +60,25 @@ public class ManagePaymentNoticeFolderUpdates {
                     eventHubName = "", // blank because the value is included in the connection string
                     connection = "NOTICE_COMPLETE_EVENTHUB_CONN_STRING",
                     cardinality = Cardinality.MANY)
-            List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequest> paymentNoticeComplete,
+            List<PaymentNoticeGenerationRequestEH> paymentNoticeComplete,
             @EventHubOutput(
                     name = "PaymentNoticeErrors",
                     eventHubName = "", // blank because the value is included in the connection string
                     connection = "NOTICE_ERR_EVENTHUB_CONN_STRING")
             OutputBinding<
-                    List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestError>
+                    List<PaymentNoticeGenerationRequestErrorEH>
                     > errors,
             final ExecutionContext context) throws JsonProcessingException {
-        logger.info("[{}] Starting... {}", context.getFunctionName(), ObjectMapperUtils.writeValueAsString(paymentNoticeComplete));
+        logger.info("[{}] Starting completing function {}", context.getFunctionName(), ObjectMapperUtils.writeValueAsString(paymentNoticeComplete));
 
-        var errorMsgList = new ArrayList<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestError>();
+        var errorMsgList = new ArrayList<PaymentNoticeGenerationRequestErrorEH>();
 
         paymentNoticeComplete.stream()
                 .filter(item -> item.getStatus().equals(PaymentGenerationRequestStatus.COMPLETING) &&
                         (item.getItems().size() + item.getNumberOfElementsFailed() >= item.getNumberOfElementsTotal())
                 ).forEach(item -> {
                     try {
-                        logger.info("[{}] Request {} for User {}", context.getFunctionName(), item.getId(), item.getUserId());
+                        MDC.put("folderId", item.getId());
                         noticeFolderService.manageFolder(
                                 PaymentNoticeGenerationRequest.builder()
                                         .id(item.getId())
@@ -87,8 +90,7 @@ public class ManagePaymentNoticeFolderUpdates {
                                         .build());
                     } catch (Exception e) {
                         logger.error("[{}] error managing notice request with id {}", context.getFunctionName(), item.getId(), e);
-                        errorMsgList.add(it.gov.pagopa.print.payment.notice.functions.model
-                                .PaymentNoticeGenerationRequestError.builder()
+                        errorMsgList.add(PaymentNoticeGenerationRequestErrorEH.builder()
                                 .folderId(item.getId())
                                 .errorId(item.getId())
                                 .numberOfAttempts(0)
@@ -97,8 +99,6 @@ public class ManagePaymentNoticeFolderUpdates {
                     }
 
                     errors.setValue(errorMsgList);
-                    logger.info("[{}] completed Request {} for User {} with {} errors", context.getFunctionName(), item.getId(), item.getUserId(), errorMsgList.size());
-
                 });
 
         logger.info("[{}] Done! {}", context.getFunctionName(), ObjectMapperUtils.writeValueAsString(paymentNoticeComplete));

@@ -5,10 +5,6 @@ import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.result.InsertOneResult;
-import it.gov.pagopa.print.payment.notice.functions.client.impl.PaymentNoticeGenerationRequestClientImpl;
-import it.gov.pagopa.print.payment.notice.functions.client.impl.PaymentNoticeGenerationRequestErrorClientImpl;
-import it.gov.pagopa.print.payment.notice.functions.entity.PaymentGenerationRequestStatus;
-import it.gov.pagopa.print.payment.notice.functions.entity.PaymentNoticeGenerationRequest;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentNoticeGenerationRequestError;
 import org.bson.BsonString;
 import org.bson.BsonValue;
@@ -30,7 +26,7 @@ import static org.mockito.Mockito.*;
 import static uk.org.webcompere.systemstubs.SystemStubs.withEnvironmentVariables;
 
 @ExtendWith(MockitoExtension.class)
-class PaymentNoticeGenerationRequestErrorClientImplTest {
+class PaymentNoticeGenerationRequestEHErrorClientImplTest {
 
     @Mock
     public MongoCollection mongoCollection;
@@ -50,7 +46,7 @@ class PaymentNoticeGenerationRequestErrorClientImplTest {
         mongoDatabase = Mockito.mock(MongoDatabase.class);
         lenient().when(mongoClient.getDatabase(any())).thenReturn(mongoDatabase);
         lenient().when(mongoDatabase.withCodecRegistry(any())).thenReturn(mongoDatabase);
-        lenient().when(mongoDatabase.getCollection(any(),any())).thenReturn(mongoCollection);
+        lenient().when(mongoDatabase.getCollection(any(), any())).thenReturn(mongoCollection);
         paymentNoticeGenerationRequestClient =
                 new PaymentNoticeGenerationRequestErrorClientImpl(mongoClient);
     }
@@ -69,9 +65,9 @@ class PaymentNoticeGenerationRequestErrorClientImplTest {
 
         assertDoesNotThrow(() ->
                 paymentNoticeGenerationRequestClient
-                .updatePaymentGenerationRequestError(
-                PaymentNoticeGenerationRequestError.builder()
-                        .build()));
+                        .updatePaymentGenerationRequestError(
+                                PaymentNoticeGenerationRequestError.builder()
+                                        .build()));
     }
 
     @Test

@@ -16,6 +16,8 @@ import it.gov.pagopa.print.payment.notice.functions.entity.PaymentNoticeGenerati
 import it.gov.pagopa.print.payment.notice.functions.exception.Aes256Exception;
 import it.gov.pagopa.print.payment.notice.functions.exception.PaymentNoticeManagementException;
 import it.gov.pagopa.print.payment.notice.functions.exception.RequestRecoveryException;
+import it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestEH;
+import it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestErrorEH;
 import it.gov.pagopa.print.payment.notice.functions.model.notice.NoticeRequestEH;
 import it.gov.pagopa.print.payment.notice.functions.service.NoticeFolderService;
 import it.gov.pagopa.print.payment.notice.functions.service.impl.NoticeFolderServiceImpl;
@@ -23,6 +25,7 @@ import it.gov.pagopa.print.payment.notice.functions.utils.Aes256Utils;
 import it.gov.pagopa.print.payment.notice.functions.utils.ObjectMapperUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -75,7 +78,7 @@ public class ManageNoticeErrors {
                     eventHubName = "", // blank because the value is included in the connection string
                     connection = "NOTICE_ERR_EVENTHUB_CONN_STRING",
                     cardinality = Cardinality.MANY)
-            List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestError> paymentNoticeErrors,
+            List<PaymentNoticeGenerationRequestErrorEH> paymentNoticeErrors,
             @EventHubOutput(
                     name = "PaymentNoticeRequest",
                     eventHubName = "", // blank because the value is included in the connection string
@@ -85,26 +88,24 @@ public class ManageNoticeErrors {
                     name = "PaymentNoticeComplete",
                     eventHubName = "", // blank because the value is included in the connection string
                     connection = "NOTICE_COMPLETE_EVENTHUB_CONN_STRING")
-            OutputBinding<List<it.gov.pagopa.print.payment.notice.functions.model
-                    .PaymentNoticeGenerationRequest>> completionToRetry,
-            final ExecutionContext context) {
+            OutputBinding<List<PaymentNoticeGenerationRequestEH>> completionToRetry,
+            final ExecutionContext context) throws JsonProcessingException {
 
-        List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequest>
-                paymentNoticeGenerationRequestList =
-                new ArrayList<>();
-        List<NoticeRequestEH>
-                noticeRequestEHS =
-                new ArrayList<>();
+        logger.info("[{}] Starting Retry function {}", context.getFunctionName(), ObjectMapperUtils.writeValueAsString(paymentNoticeErrors));
+
+        List<PaymentNoticeGenerationRequestEH> paymentNoticeGenerationRequestList = new ArrayList<>();
+        List<NoticeRequestEH> noticeRequestEHS = new ArrayList<>();
 
         paymentNoticeErrors.forEach(error -> {
 
             PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError = null;
             try {
-                if(error.getId() != null) {
+                MDC.put("folderId", error.getFolderId());
+                if (error.getId() != null) {
 
                     paymentNoticeGenerationRequestError =
-                            paymentNoticeGenerationRequestErrorClient.findOne(error.getId()).orElseThrow(() ->
-                                    new PaymentNoticeManagementException("Request error not found",
+                            paymentNoticeGenerationRequestErrorClient.findOne(error.getId())
+                                    .orElseThrow(() -> new PaymentNoticeManagementException("Request error not found",
                                             HttpStatus.INTERNAL_SERVER_ERROR.value()));
                 } else {
                     paymentNoticeGenerationRequestError = PaymentNoticeGenerationRequestError.builder()
@@ -118,21 +119,23 @@ public class ManageNoticeErrors {
                             .build();
                     paymentNoticeGenerationRequestError.setId(
                             paymentNoticeGenerationRequestErrorClient.save(paymentNoticeGenerationRequestError));
+
                 }
             } catch (Exception e) {
-                logger.error(ERROR_STRING,
-                        context.getFunctionName(), error.getFolderId(), e);
+                logger.error(ERROR_STRING, context.getFunctionName(), error.getFolderId(), e);
             }
+            logger.info("[{}] Processing a new Retry Generation Event {}", context.getFunctionName(), error.getId());
 
 
-            if(paymentNoticeGenerationRequestError != null &&
+            if (paymentNoticeGenerationRequestError != null &&
                     error.getNumberOfAttempts() < maxRetriesOnErrors) {
 
-                if(error.isCompressionError() &&
+                if (error.isCompressionError() &&
                         !"UNKNOWN".equals(paymentNoticeGenerationRequestError.getFolderId())) {
                     addRequestsToRetry(paymentNoticeGenerationRequestList, context, error, paymentNoticeGenerationRequestError);
+                    logger.info("[{}] Retry Generation Event", context.getFunctionName());
                 } else {
-
+                    logger.info("[{}] Retry Massive Request", context.getFunctionName());
                     addToNoticesToRetry(noticeRequestEHS, context, error, paymentNoticeGenerationRequestError);
                 }
 
@@ -157,14 +160,14 @@ public class ManageNoticeErrors {
         }
     }
 
-    private void addRequestsToRetry(List<it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequest> completionToRetry, ExecutionContext context, it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestError error, PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError) {
+    private void addRequestsToRetry(List<PaymentNoticeGenerationRequestEH> completionToRetry, ExecutionContext context, PaymentNoticeGenerationRequestErrorEH error, PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError) {
         try {
             PaymentNoticeGenerationRequest paymentNoticeGenerationRequest =
                     noticeFolderService.findRequest(error.getId());
-            if(paymentNoticeGenerationRequest.getStatus().equals(
+            if (paymentNoticeGenerationRequest.getStatus().equals(
                     PaymentGenerationRequestStatus.COMPLETING)) {
                 completionToRetry.add(
-                        it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequest
+                        PaymentNoticeGenerationRequestEH
                                 .builder()
                                 .id(paymentNoticeGenerationRequest.getId())
                                 .numberOfElementsTotal(paymentNoticeGenerationRequest
@@ -183,7 +186,7 @@ public class ManageNoticeErrors {
         }
     }
 
-    private void addToNoticesToRetry(List<NoticeRequestEH> noticesToRetry, ExecutionContext context, it.gov.pagopa.print.payment.notice.functions.model.PaymentNoticeGenerationRequestError error, PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError) {
+    private void addToNoticesToRetry(List<NoticeRequestEH> noticesToRetry, ExecutionContext context, PaymentNoticeGenerationRequestErrorEH error, PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError) {
         try {
             String plainRequestData = Aes256Utils.decrypt(error.getData());
             NoticeRequestEH noticeRequestEH =
