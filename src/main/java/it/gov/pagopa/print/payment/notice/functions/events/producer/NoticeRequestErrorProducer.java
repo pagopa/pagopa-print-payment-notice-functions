@@ -14,6 +14,6 @@ public interface NoticeRequestErrorProducer {
      * @param paymentNoticeGenerationRequestError data to send
      * @return boolean referring if the insertion on the sending channel was successfully
      */
-    boolean noticeError(RetryEvent paymentNoticeGenerationRequestError);
+    boolean sendErrorEvent(RetryEvent paymentNoticeGenerationRequestError);
 
 }

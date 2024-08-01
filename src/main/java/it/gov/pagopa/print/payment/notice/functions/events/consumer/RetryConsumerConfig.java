@@ -11,7 +11,7 @@ import java.util.function.Consumer;
 @Slf4j
 public class RetryConsumerConfig {
     @Bean
-    public Consumer<String> handleRetry(RetryService retryService) {
+    public Consumer<String> noticeError(RetryService retryService) {
         return retryService::retryError;
     }
 }

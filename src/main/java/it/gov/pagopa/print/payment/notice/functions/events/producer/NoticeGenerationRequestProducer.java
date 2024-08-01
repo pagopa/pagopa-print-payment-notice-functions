@@ -17,6 +17,6 @@ public interface NoticeGenerationRequestProducer {
      * @param noticeGenerationRequestEH data to send
      * @return boolean referring if the insertion on the sending channel was successfully
      */
-    boolean noticeGeneration(GenerationEvent noticeGenerationRequestEH);
+    boolean sendGenerationEvent(GenerationEvent noticeGenerationRequestEH);
 
 }

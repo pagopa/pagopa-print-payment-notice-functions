@@ -26,7 +26,7 @@ public class NoticeRequestCompleteProducerImpl implements NoticeRequestCompleteP
     }
 
     @Override
-    public boolean noticeComplete(CompressionEvent paymentNoticeGenerationRequest) {
+    public boolean sendNoticeComplete(CompressionEvent paymentNoticeGenerationRequest) {
         return streamBridge.send("noticeComplete-out-0",
                 buildMessage(paymentNoticeGenerationRequest));
     }
@@ -39,7 +39,7 @@ public class NoticeRequestCompleteProducerImpl implements NoticeRequestCompleteP
     static class NoticeGenerationRequestProducerConfig {
 
         @Bean
-        public Supplier<Flux<Message<CompressionEvent>>> noticeComplete() {
+        public Supplier<Flux<Message<CompressionEvent>>> noticeCompleteOut() {
             return Flux::empty;
         }
 

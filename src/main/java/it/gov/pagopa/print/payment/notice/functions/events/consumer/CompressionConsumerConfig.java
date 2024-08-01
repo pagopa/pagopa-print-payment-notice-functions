@@ -11,7 +11,13 @@ import java.util.function.Consumer;
 @Slf4j
 public class CompressionConsumerConfig {
     @Bean
-    public Consumer<String> folderCompression(CompressionService compressionService) {
+    public Consumer<String> noticeComplete(CompressionService compressionService) {
         return compressionService::compressFolder;
     }
+
+
+//    @ServiceActivator(inputChannel = "medium-eventhub.$Default.errors")
+//    public void consumerError(Message<?> message) {
+//        log.error("Handling consumer ERROR: " + message);
+//    }
 }

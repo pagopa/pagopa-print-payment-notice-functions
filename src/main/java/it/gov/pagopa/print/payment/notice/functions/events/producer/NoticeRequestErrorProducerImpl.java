@@ -28,7 +28,7 @@ public class NoticeRequestErrorProducerImpl implements NoticeRequestErrorProduce
     }
 
     @Override
-    public boolean noticeError(RetryEvent paymentNoticeGenerationRequestError) {
+    public boolean sendErrorEvent(RetryEvent paymentNoticeGenerationRequestError) {
         return streamBridge.send("noticeError-out-0",
                 buildMessage(paymentNoticeGenerationRequestError));
     }
@@ -41,7 +41,7 @@ public class NoticeRequestErrorProducerImpl implements NoticeRequestErrorProduce
     static class NoticeGenerationRequestErrorConfig {
 
         @Bean
-        public Supplier<Flux<Message<RetryEvent>>> noticeError() {
+        public Supplier<Flux<Message<RetryEvent>>> sendErrorEvent() {
             return Flux::empty;
         }
 

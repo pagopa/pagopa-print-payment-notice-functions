@@ -27,7 +27,7 @@ public class NoticeGenerationRequestProducerImpl implements NoticeGenerationRequ
     }
 
     @Override
-    public boolean noticeGeneration(GenerationEvent noticeGenerationRequestEH) {
+    public boolean sendGenerationEvent(GenerationEvent noticeGenerationRequestEH) {
         return streamBridge.send("noticeGeneration-out-0",
                 buildMessage(noticeGenerationRequestEH));
     }
@@ -40,7 +40,7 @@ public class NoticeGenerationRequestProducerImpl implements NoticeGenerationRequ
     static class NoticeGenerationRequestProducerConfig {
 
         @Bean
-        public Supplier<Flux<Message<GenerationEvent>>> noticeGeneration() {
+        public Supplier<Flux<Message<GenerationEvent>>> sendGenerationEvent() {
             return Flux::empty;
         }
 

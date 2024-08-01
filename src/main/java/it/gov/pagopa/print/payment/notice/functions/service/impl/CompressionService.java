@@ -5,6 +5,7 @@ import it.gov.pagopa.print.payment.notice.functions.entity.PaymentGenerationRequ
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentNoticeGenerationRequest;
 import it.gov.pagopa.print.payment.notice.functions.events.model.CompressionEvent;
 import it.gov.pagopa.print.payment.notice.functions.events.model.RetryEvent;
+import it.gov.pagopa.print.payment.notice.functions.events.producer.NoticeRequestCompleteProducer;
 import it.gov.pagopa.print.payment.notice.functions.events.producer.NoticeRequestErrorProducer;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
@@ -23,6 +24,10 @@ public class CompressionService {
 
     @Autowired
     private NoticeRequestErrorProducer noticeRequestErrorProducer;
+
+    @Autowired
+    private NoticeRequestCompleteProducer noticeRequestCompleteProducer;
+
 
     public void compressFolder(String message) {
         try {
@@ -50,7 +55,7 @@ public class CompressionService {
                             .numberOfAttempts(0)
                             .compressionError(true)
                             .build();
-                    noticeRequestErrorProducer.noticeError(errorMsg);
+                    noticeRequestErrorProducer.sendErrorEvent(errorMsg);
                     MDC.put("massiveStatus", "FAILED");
                     log.error("Massive Request FAILED", e);
                 }

@@ -62,12 +62,12 @@ public class RetryService {
 
                 if (isCompressionError(retryMessage, paymentNoticeGenerationRequestError)) {
                     CompressionEvent compressionEvent = buildCompressionError(retryMessage);
-                    noticeRequestCompleteProducer.noticeComplete(compressionEvent);
+                    noticeRequestCompleteProducer.sendNoticeComplete(compressionEvent);
                     log.debug("Sent a new compression event");
 
                 } else {
                     GenerationEvent generationEvent = buildNoticeRetry(retryMessage);
-                    noticeGenerationRequestProducer.noticeGeneration(generationEvent);
+                    noticeGenerationRequestProducer.sendGenerationEvent(generationEvent);
                     log.debug("Sent a new generation event");
                 }
             }
