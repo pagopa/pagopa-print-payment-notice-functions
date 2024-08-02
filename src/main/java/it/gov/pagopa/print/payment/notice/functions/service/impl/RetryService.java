@@ -55,6 +55,12 @@ public class RetryService {
 
             MDC.put("folderId", retryMessage.getFolderId());
             log.info("Starting Retry Function {}", retryMessage);
+            MDC.put("topic", "error");
+            MDC.put("action", "received");
+            log.info("Error Complete Message");
+            MDC.remove("topic");
+            MDC.remove("action");
+
 
             var paymentNoticeGenerationRequestError = findErrorOrCreate(retryMessage);
 

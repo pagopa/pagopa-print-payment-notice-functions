@@ -38,6 +38,12 @@ public class CompressionService {
                 MDC.put("folderId", compressionMessage.getId());
                 log.info("Starting Compress Function {}", compressionMessage);
 
+                MDC.put("topic", "complete");
+                MDC.put("action", "received");
+                log.info("Received Complete Message");
+                MDC.remove("topic");
+                MDC.remove("action");
+
                 try {
                     noticeFolderService.manageFolder(
                             PaymentNoticeGenerationRequest.builder()

@@ -2,6 +2,7 @@ package it.gov.pagopa.print.payment.notice.functions.events.producer;
 
 import it.gov.pagopa.print.payment.notice.functions.events.model.ErrorEvent;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,6 +15,7 @@ import java.util.function.Supplier;
 
 
 @Service
+@Slf4j
 public class NoticeRequestErrorProducerImpl implements NoticeRequestErrorProducer {
 
     private final StreamBridge streamBridge;
@@ -29,8 +31,16 @@ public class NoticeRequestErrorProducerImpl implements NoticeRequestErrorProduce
 
     @Override
     public boolean sendErrorEvent(ErrorEvent paymentNoticeGenerationRequestError) {
-        return streamBridge.send("noticeError-out-0",
+        var res = streamBridge.send("noticeError-out-0",
                 buildMessage(paymentNoticeGenerationRequestError));
+
+        MDC.put("topic", "complete");
+        MDC.put("action", "sent");
+        log.info("Complete Message Retry Sent");
+        MDC.remove("topic");
+        MDC.remove("action");
+
+        return res;
     }
 
     /**
