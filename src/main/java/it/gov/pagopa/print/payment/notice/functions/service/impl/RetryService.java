@@ -81,6 +81,7 @@ public class RetryService {
         } catch (Exception e) {
             MDC.put("massiveStatus", "EXCEPTION");
             log.error(e.getMessage(), e);
+            MDC.remove("massiveStatus");
         }
     }
 

@@ -51,6 +51,7 @@ public class NoticeFolderService {
         paymentGenerationRequestErrorRepository.deleteById(paymentNoticeGenerationRequest.getId());
         MDC.put("massiveStatus", paymentNoticeGenerationRequest.getStatus().toString());
         log.info("Massive Request {} [user {}]", paymentNoticeGenerationRequest.getStatus(), paymentNoticeGenerationRequest.getUserId());
+        MDC.remove("massiveStatus");
     }
 
     /**

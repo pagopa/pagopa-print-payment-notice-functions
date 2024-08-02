@@ -58,12 +58,14 @@ public class CompressionService {
                     noticeRequestErrorProducer.sendErrorEvent(errorMsg);
                     MDC.put("massiveStatus", "FAILED");
                     log.error("Massive Request FAILED", e);
+                    MDC.remove("massiveStatus");
                 }
 
             }
         } catch (Exception e) {
             MDC.put("massiveStatus", "EXCEPTION");
             log.error("Massive Request EXCEPTION", e);
+            MDC.remove("massiveStatus");
             throw new RuntimeException(e);
         }
 
