@@ -4,7 +4,7 @@ microservice-chart:
   fullnameOverride: "print-payment-notice-functions"
   image:
     repository: ghcr.io/pagopa/pagopa-print-payment-notice-functions
-    tag: "0.0.17-6-springboot"
+    tag: "0.0.17-7-springboot"
     pullPolicy: Always
   livenessProbe:
     httpGet:
