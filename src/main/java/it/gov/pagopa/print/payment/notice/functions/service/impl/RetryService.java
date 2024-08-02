@@ -17,7 +17,6 @@ import it.gov.pagopa.print.payment.notice.functions.repository.PaymentGeneration
 import it.gov.pagopa.print.payment.notice.functions.utils.Aes256Utils;
 import it.gov.pagopa.print.payment.notice.functions.utils.ObjectMapperUtils;
 import lombok.extern.slf4j.Slf4j;
-import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -49,7 +48,6 @@ public class RetryService {
     @Autowired
     private PaymentGenerationRequestErrorRepository paymentGenerationRequestErrorRepository;
 
-    @SchedulerLock(name = "retryError", lockAtMostFor = "30s", lockAtLeastFor = "10s")
     public void retryError(String message) {
 
         try {

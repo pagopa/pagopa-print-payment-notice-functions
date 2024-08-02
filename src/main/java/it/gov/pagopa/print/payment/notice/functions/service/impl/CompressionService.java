@@ -5,10 +5,8 @@ import it.gov.pagopa.print.payment.notice.functions.entity.PaymentGenerationRequ
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentNoticeGenerationRequest;
 import it.gov.pagopa.print.payment.notice.functions.events.model.CompressionEvent;
 import it.gov.pagopa.print.payment.notice.functions.events.model.ErrorEvent;
-import it.gov.pagopa.print.payment.notice.functions.events.producer.NoticeRequestCompleteProducer;
 import it.gov.pagopa.print.payment.notice.functions.events.producer.NoticeRequestErrorProducer;
 import lombok.extern.slf4j.Slf4j;
-import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -26,11 +24,7 @@ public class CompressionService {
     @Autowired
     private NoticeRequestErrorProducer noticeRequestErrorProducer;
 
-    @Autowired
-    private NoticeRequestCompleteProducer noticeRequestCompleteProducer;
 
-
-    @SchedulerLock(name = "compressFolder", lockAtMostFor = "30s", lockAtLeastFor = "10s")
     public void compressFolder(String message) {
         try {
             var compressionMessage = objectMapper.readValue(message, CompressionEvent.class);
