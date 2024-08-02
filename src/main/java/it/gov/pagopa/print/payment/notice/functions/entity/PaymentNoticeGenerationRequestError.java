@@ -11,7 +11,7 @@ import java.time.Instant;
 @AllArgsConstructor
 @EqualsAndHashCode(of = "errorId")
 @ToString
-@Document("payment_notice_generation_request")
+@Document("payment_notice_generation_request_error")
 public class PaymentNoticeGenerationRequestError {
 
     private String id;

@@ -12,7 +12,7 @@ import java.util.List;
 @AllArgsConstructor
 @EqualsAndHashCode(of = "id")
 @ToString
-@Document("payment_notice_generation_request_error")
+@Document("payment_notice_generation_request")
 public class PaymentNoticeGenerationRequest {
 
     private String id;
