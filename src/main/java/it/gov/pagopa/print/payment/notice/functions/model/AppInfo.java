@@ -1,14 +1,13 @@
 package it.gov.pagopa.print.payment.notice.functions.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
 
 @Data
 @Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-@JsonInclude(JsonInclude.Include.NON_NULL)
+@ToString
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class AppInfo {
 
