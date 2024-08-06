@@ -2,16 +2,13 @@ version: '3.8'
 
 services:
   app:
-    container_name: 'receipt-pdf-generator'
+    container_name: 'print-notice-functions'
     image: ${image}
     platform: linux/amd64
     build:
       dockerfile: Dockerfile
       context: ../
-    environment:
-      BRAND_LOGO_MAP: '{"MASTERCARD":"assets/mastercard.png","VISA":"assets/visa.png","AMEX":"assets/amex.png","MAESTRO":"assets/maestro.png","JCB":"assets/jcb.png","OTHER":"","DINERS":"assets/diners.png","DISCOVER":"assets/discover.png","UNIONPAY":"assets/unionpay.png"}'
-      PSP_INFO_MAP: '{"60000000001":{"logo":"assets/nexi-logo.png","name":"Nexi","companyName":"Nexi Payments S.p.A.","address":"Corso Sempione","buildingNumber":"55","postalCode":"20149","city":"Milano","province":"MI","fee":{"amount":"2,00"}}}'
     env_file:
       - ./.env
     ports:
-      - "60486:80"
+      - "8080:8080"

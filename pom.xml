@@ -14,7 +14,7 @@
     <artifactId>print-payment-notice-functions</artifactId>
     <version>0.0.17-11-springboot</version>
     <name>pagopa-print-payment-notice-functions</name>
-    <description>PagoPA Print Payment Notices Generator</description>
+    <description>PagoPA Print Payment Notices Functions</description>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
