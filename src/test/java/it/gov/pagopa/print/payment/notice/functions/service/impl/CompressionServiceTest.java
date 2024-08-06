@@ -51,7 +51,7 @@ class CompressionServiceTest {
         BlobStorageResponse mock = mock(BlobStorageResponse.class);
         when(mock.getStatusCode()).thenReturn(200);
         when(noticeStorageClient.compressFolder(folderId)).thenReturn(mock);
-        var message = CompressionEvent.builder()
+        var elem = CompressionEvent.builder()
                 .id(folderId)
                 .status(PaymentGenerationRequestStatus.COMPLETING)
                 .userId("comune di roma")
@@ -59,7 +59,8 @@ class CompressionServiceTest {
                 .numberOfElementsTotal(2)
                 .items(List.of("11", "22"))
                 .build();
-//        compressionService.compressFolder(new ObjectMapper().writeValueAsString(message));
+        var message = List.of(new ObjectMapper().writeValueAsString(elem));
+        compressionService.compressFolder(message);
         verify(paymentGenerationRequestRepository).save(any());
     }
 
@@ -69,7 +70,7 @@ class CompressionServiceTest {
         BlobStorageResponse mock = mock(BlobStorageResponse.class);
         when(mock.getStatusCode()).thenReturn(400);
         when(noticeStorageClient.compressFolder(folderId)).thenReturn(mock);
-        var message = CompressionEvent.builder()
+        var elem = CompressionEvent.builder()
                 .id(folderId)
                 .status(PaymentGenerationRequestStatus.COMPLETING)
                 .userId("comune di roma")
@@ -77,7 +78,8 @@ class CompressionServiceTest {
                 .numberOfElementsTotal(2)
                 .items(List.of("11", "22"))
                 .build();
-//        compressionService.compressFolder(new ObjectMapper().writeValueAsString(message));
+        var message = List.of(new ObjectMapper().writeValueAsString(elem));
+        compressionService.compressFolder(message);
         verify(noticeRequestErrorProducer).sendErrorEvent(any());
     }
 }

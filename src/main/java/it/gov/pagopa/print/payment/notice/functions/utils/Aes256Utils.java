@@ -1,8 +1,12 @@
 package it.gov.pagopa.print.payment.notice.functions.utils;
 
 import it.gov.pagopa.print.payment.notice.functions.exception.Aes256Exception;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
-import javax.crypto.*;
+import javax.crypto.Cipher;
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
@@ -11,18 +15,22 @@ import java.security.SecureRandom;
 import java.security.spec.KeySpec;
 import java.util.Base64;
 
+@Component
 public class Aes256Utils {
 
-    private static final String AES_SECRET_KEY = System.getenv().getOrDefault("AES_SECRET_KEY", "");
-    private static final String AES_SALT = System.getenv().getOrDefault("AES_SALT", "");
-    private static final int KEY_LENGTH = 256;
-    private static final int ITERATION_COUNT = 65536;
+
     public static final String PBKDF_2_WITH_HMAC_SHA_256 = "PBKDF2WithHmacSHA256";
     public static final String AES_CBC_PKCS_5_PADDING = "AES/CBC/PKCS5Padding";
-
     public static final String ALGORITHM = "AES";
-
+    private static final int KEY_LENGTH = 256;
+    private static final int ITERATION_COUNT = 65536;
     private static final int AES_UNEXPECTED_ERROR = 701;
+
+    @Value("${aes.secret.key}")
+    private String aesKey;
+
+    @Value("${aes.salt}")
+    private String aesSalt;
 
 
     /**
@@ -31,7 +39,7 @@ public class Aes256Utils {
     private Aes256Utils() {
     }
 
-    public static String encrypt(String strToEncrypt) throws Aes256Exception {
+    public String encrypt(String strToEncrypt) throws Aes256Exception {
 
         try {
 
@@ -41,7 +49,7 @@ public class Aes256Utils {
             IvParameterSpec ivspec = new IvParameterSpec(iv);
 
             SecretKeyFactory factory = SecretKeyFactory.getInstance(PBKDF_2_WITH_HMAC_SHA_256);
-            KeySpec spec = new PBEKeySpec(AES_SECRET_KEY.toCharArray(), AES_SALT.getBytes(), ITERATION_COUNT, KEY_LENGTH);
+            KeySpec spec = new PBEKeySpec(aesKey.toCharArray(), aesSalt.getBytes(), ITERATION_COUNT, KEY_LENGTH);
             SecretKey tmp = factory.generateSecret(spec);
             SecretKeySpec secretKeySpec = new SecretKeySpec(tmp.getEncoded(), ALGORITHM);
 
@@ -60,15 +68,15 @@ public class Aes256Utils {
         }
     }
 
-    public static String decrypt(String strToDecrypt) throws Aes256Exception {
-        try{
+    public String decrypt(String strToDecrypt) throws Aes256Exception {
+        try {
             byte[] encryptedData = Base64.getDecoder().decode(strToDecrypt);
             byte[] iv = new byte[16];
             System.arraycopy(encryptedData, 0, iv, 0, iv.length);
             IvParameterSpec ivspec = new IvParameterSpec(iv);
 
             SecretKeyFactory factory = SecretKeyFactory.getInstance(PBKDF_2_WITH_HMAC_SHA_256);
-            KeySpec spec = new PBEKeySpec(AES_SECRET_KEY.toCharArray(), AES_SALT.getBytes(), ITERATION_COUNT, KEY_LENGTH);
+            KeySpec spec = new PBEKeySpec(aesKey.toCharArray(), aesSalt.getBytes(), ITERATION_COUNT, KEY_LENGTH);
             SecretKey tmp = factory.generateSecret(spec);
             SecretKeySpec secretKeySpec = new SecretKeySpec(tmp.getEncoded(), ALGORITHM);
 

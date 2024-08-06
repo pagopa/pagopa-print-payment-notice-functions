@@ -48,6 +48,9 @@ public class RetryService {
     @Autowired
     private PaymentGenerationRequestErrorRepository paymentGenerationRequestErrorRepository;
 
+    @Autowired
+    private Aes256Utils aes256Utils;
+
     public void retryError(String message) {
 
         try {
@@ -146,7 +149,7 @@ public class RetryService {
     }
 
     private GenerationEvent buildNoticeRetry(ErrorEvent error) throws Aes256Exception, JsonProcessingException {
-        String plainRequestData = Aes256Utils.decrypt(error.getData());
+        String plainRequestData = aes256Utils.decrypt(error.getData());
         GenerationEvent noticeRequestEH = ObjectMapperUtils.mapString(plainRequestData, GenerationEvent.class);
         noticeRequestEH.setErrorId(error.getId());
         return noticeRequestEH;

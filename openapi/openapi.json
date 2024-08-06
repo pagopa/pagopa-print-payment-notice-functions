@@ -1,8 +1,10 @@
 {
   "openapi" : "3.0.1",
   "info" : {
-    "title" : "OpenAPI definition",
-    "version" : "v0"
+    "description" : "PagoPA Print Payment Notices Functions",
+    "termsOfService" : "https://www.pagopa.gov.it/",
+    "title" : "pagopa-print-payment-notice-functions",
+    "version" : "0.0.17-12-springboot"
   },
   "servers" : [ {
     "url" : "http://localhost",
@@ -48,6 +50,14 @@
             "type" : "string"
           }
         }
+      }
+    },
+    "securitySchemes" : {
+      "ApiKey" : {
+        "description" : "The API key to access this function app.",
+        "in" : "header",
+        "name" : "Ocp-Apim-Subscription-Key",
+        "type" : "apiKey"
       }
     }
   }

@@ -26,13 +26,12 @@ microservice-chart:
     create: true
     type: ClusterIP
     ports:
-      - 80 #http
-      - 12345 #jmx-exporter
+      - 8080
   ingress:
     create: true
     host: "printit.itn.internal.platform.pagopa.it"
     path: /pagopa-print-payment-notice-functions/(.*)
-    servicePort: 80
+    servicePort: 8080
   serviceAccount:
     create: false
     annotations: { }
