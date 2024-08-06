@@ -8,16 +8,16 @@ microservice-chart:
     pullPolicy: Always
   livenessProbe:
     httpGet:
-      path: /health
-      port: 80
-    initialDelaySeconds: 210
+      path: /actuator/health/liveness
+      port: 8080
+    initialDelaySeconds: 60
     failureThreshold: 6
     periodSeconds: 10
   readinessProbe:
     httpGet:
-      path: /health
-      port: 80
-    initialDelaySeconds: 210
+      path: /actuator/health/readiness
+      port: 8080
+    initialDelaySeconds: 60
     failureThreshold: 6
     periodSeconds: 10
   deployment:
@@ -35,9 +35,9 @@ microservice-chart:
     servicePort: 80
   serviceAccount:
     create: false
-    annotations: {}
+    annotations: { }
     name: ""
-  podAnnotations: {}
+  podAnnotations: { }
   podSecurityContext:
     seccompProfile:
       type: RuntimeDefault
@@ -75,29 +75,29 @@ microservice-chart:
     OTEL_METRICS_EXPORTER: otlp
     OTEL_LOGS_EXPORTER: none
     OTEL_TRACES_SAMPLER: "always_on"
-    NOTICE_REQUEST_MONGO_DB_NAME: "noticesMongoDb"
-    NOTICE_REQUEST_MONGO_COLLECTION_NAME: "payment_notice_generation_request"
-    NOTICE_ERR_REQUEST_MONGO_COLLECTION_NAME: "payment_notice_generation_request_error"
-    BLOB_STORAGE_CONTAINER_NAME: "notices"
-    BLOB_STORAGE_ACCOUNT_ENDPOINT: "https://pagopapprintitnotices.blob.core.windows.net"
+    KAFKA_BROKER: "pagopa-p-itn-printit-evh.servicebus.windows.net:9093"
+    EVENTHUB_COMPLETE_GROUP_ID: "pagopa-p-itn-printit-notice-evt-complete-rx"
+    EVENTHUB_ERROR_GROUP_ID: "pagopa-p-itn-printit-notice-evt-errors-rx"
+    KAFKA_NOTICE_GENERATION_TOPIC: 'pagopa-printit-evh'
+    KAFKA_NOTICE_COMPLETE_TOPIC: 'pagopa-printit-complete-evh'
+    KAFKA_NOTICE_ERROR_TOPIC: 'pagopa-printit-errors-evh'
     MAX_RETRIES_ON_ERRORS: "3"
   envSecret:
     # required
     APPLICATIONINSIGHTS_CONNECTION_STRING: 'app-insight-connection-string'
     OTEL_EXPORTER_OTLP_HEADERS: 'elastic-apm-secret-token'
-    NOTICE_EVENTHUB_CONN_STRING: 'ehub-p-notice-connection-string'
-    AzureWebJobsStorage: 'notices-storage-account-connection-string'
-    NOTICE_ERR_EVENTHUB_CONN_STRING: 'ehub-p-notice-errors-connection-string'
-    NOTICE_COMPLETE_EVENTHUB_CONN_STRING: 'ehub-p-notice-complete-connection-string'
-    NOTICE_REQUEST_MONGODB_CONN_STRING: 'notices-mongo-connection-string'
-    BLOB_STORAGE_CONN_STRING: 'notices-storage-account-connection-string'
+    MONGODB_CONNECTION_URI: 'notices-mongo-connection-string'
+    NOTICE_STORAGE_CONN_STRING: 'notices-storage-account-connection-string'
+    KAFKA_SASL_JAAS_CONFIG: 'ehub-p-notice-jaas-config'
+    NOTICE_COMPLETE_KAFKA_SASL_JAAS_CONFIG: 'ehub-p-notice-complete-jaas-config'
+    NOTICE_ERROR_KAFKA_SASL_JAAS_CONFIG: 'ehub-p-notice-errors-jaas-config'
     AES_SECRET_KEY: 'aes-key'
     AES_SALT: 'aes-salt'
   keyvault:
     name: "pagopa-p-itn-printit-kv"
     tenantId: "7788edaf-0346-4068-9d79-c868aed15b3d"
-  nodeSelector: {}
-  tolerations: []
+  nodeSelector: { }
+  tolerations: [ ]
   affinity:
     nodeAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -114,7 +114,7 @@ microservice-chart:
             labelSelector:
               matchLabels:
                 app.kubernetes.io/instance: print-payment-notice-functions
-            namespaces: ["printit"]
+            namespaces: [ "printit" ]
             topologyKey: topology.kubernetes.io/zone
   canaryDelivery:
     create: false
@@ -133,5 +133,5 @@ microservice-chart:
         repository: ghcr.io/pagopa/pagopa-print-payment-notice-functions
         tag: "0.0.0"
         pullPolicy: Always
-      envConfig: {}
-      envSecret: {}
+      envConfig: { }
+      envSecret: { }

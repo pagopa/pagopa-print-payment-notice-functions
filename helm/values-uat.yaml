@@ -35,9 +35,9 @@ microservice-chart:
     servicePort: 80
   serviceAccount:
     create: false
-    annotations: {}
+    annotations: { }
     name: ""
-  podAnnotations: {}
+  podAnnotations: { }
   podSecurityContext:
     seccompProfile:
       type: RuntimeDefault
@@ -75,14 +75,6 @@ microservice-chart:
     OTEL_METRICS_EXPORTER: otlp
     OTEL_LOGS_EXPORTER: none
     OTEL_TRACES_SAMPLER: "always_on"
-    #  --- delete ---
-    NOTICE_REQUEST_MONGO_DB_NAME: "noticesMongoDb"
-    NOTICE_REQUEST_MONGO_COLLECTION_NAME: "payment_notice_generation_request"
-    NOTICE_ERR_REQUEST_MONGO_COLLECTION_NAME: "payment_notice_generation_request_error"
-    BLOB_STORAGE_CONTAINER_NAME: "notices"
-    BLOB_STORAGE_ACCOUNT_ENDPOINT: "https://pagopauprintitnotices.blob.core.windows.net"
-    # -----
-
     KAFKA_BROKER: "pagopa-u-itn-printit-evh.servicebus.windows.net:9093"
     EVENTHUB_COMPLETE_GROUP_ID: "pagopa-u-itn-printit-notice-evt-complete-rx"
     EVENTHUB_ERROR_GROUP_ID: "pagopa-u-itn-printit-notice-evt-errors-rx"
@@ -94,15 +86,6 @@ microservice-chart:
     # required
     APPLICATIONINSIGHTS_CONNECTION_STRING: 'app-insight-connection-string'
     OTEL_EXPORTER_OTLP_HEADERS: 'elastic-apm-secret-token'
-    #  --- delete ---
-    NOTICE_EVENTHUB_CONN_STRING: 'ehub-u-notice-connection-string'
-    AzureWebJobsStorage: 'notices-storage-account-connection-string'
-    NOTICE_ERR_EVENTHUB_CONN_STRING: 'ehub-u-notice-errors-connection-string'
-    NOTICE_COMPLETE_EVENTHUB_CONN_STRING: 'ehub-u-notice-complete-connection-string'
-    NOTICE_REQUEST_MONGODB_CONN_STRING: 'notices-mongo-connection-string'
-    BLOB_STORAGE_CONN_STRING: 'notices-storage-account-connection-string'
-    # -----
-
     MONGODB_CONNECTION_URI: 'notices-mongo-connection-string'
     NOTICE_STORAGE_CONN_STRING: 'notices-storage-account-connection-string'
     KAFKA_SASL_JAAS_CONFIG: 'ehub-u-notice-jaas-config'
@@ -113,8 +96,8 @@ microservice-chart:
   keyvault:
     name: "pagopa-u-itn-printit-kv"
     tenantId: "7788edaf-0346-4068-9d79-c868aed15b3d"
-  nodeSelector: {}
-  tolerations: []
+  nodeSelector: { }
+  tolerations: [ ]
   affinity:
     nodeAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -141,5 +124,5 @@ microservice-chart:
         repository: ghcr.io/pagopa/pagopa-print-payment-notice-functions
         tag: "0.0.0"
         pullPolicy: Always
-      envConfig: {}
-      envSecret: {}
+      envConfig: { }
+      envSecret: { }
