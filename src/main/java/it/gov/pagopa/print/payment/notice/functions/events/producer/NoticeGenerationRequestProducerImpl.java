@@ -3,6 +3,7 @@ package it.gov.pagopa.print.payment.notice.functions.events.producer;
 import it.gov.pagopa.print.payment.notice.functions.events.model.GenerationEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,11 +18,9 @@ import java.util.function.Supplier;
 @Slf4j
 public class NoticeGenerationRequestProducerImpl implements NoticeGenerationRequestProducer {
 
-    private final StreamBridge streamBridge;
+    @Autowired
+    private StreamBridge streamBridge;
 
-    public NoticeGenerationRequestProducerImpl(StreamBridge streamBridge) {
-        this.streamBridge = streamBridge;
-    }
 
     public static Message<GenerationEvent> buildMessage(
             GenerationEvent noticeGenerationRequestEH) {
