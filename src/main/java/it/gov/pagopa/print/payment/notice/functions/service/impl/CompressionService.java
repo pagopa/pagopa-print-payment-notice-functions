@@ -11,6 +11,8 @@ import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 @Slf4j
 public class CompressionService {
@@ -25,44 +27,13 @@ public class CompressionService {
     private NoticeRequestErrorProducer noticeRequestErrorProducer;
 
 
-    public void compressFolder(String message) {
+    public void compressFolder(List<String> message) {
         try {
-            var compressionMessage = objectMapper.readValue(message, CompressionEvent.class);
+            log.info("{}", message);
 
-            if (isCompleted(compressionMessage)) {
-                MDC.clear();
-                MDC.put("folderId", compressionMessage.getId());
-                log.info("Starting Compress Function {}", compressionMessage);
-
-                MDC.put("topic", "complete");
-                MDC.put("action", "received");
-                log.info("Received Complete Message");
-                MDC.remove("topic");
-                MDC.remove("action");
-
-                try {
-                    noticeFolderService.manageFolder(
-                            PaymentNoticeGenerationRequest.builder()
-                                    .id(compressionMessage.getId())
-                                    .userId(compressionMessage.getUserId())
-                                    .numberOfElementsFailed(compressionMessage.getNumberOfElementsFailed())
-                                    .numberOfElementsTotal(compressionMessage.getNumberOfElementsTotal())
-                                    .items(compressionMessage.getItems())
-                                    .status(compressionMessage.getStatus())
-                                    .build());
-                } catch (Exception e) {
-                    var errorMsg = ErrorEvent.builder()
-                            .folderId(compressionMessage.getId())
-                            .errorId(compressionMessage.getId())
-                            .numberOfAttempts(0)
-                            .compressionError(true)
-                            .build();
-                    noticeRequestErrorProducer.sendErrorEvent(errorMsg);
-                    MDC.put("massiveStatus", "FAILED");
-                    log.error("Massive Request FAILED", e);
-                    MDC.remove("massiveStatus");
-                }
-
+            for (var elem : message) {
+                var compressionMessage = objectMapper.readValue(elem, CompressionEvent.class);
+                handleMessage(compressionMessage);
             }
         } catch (Exception e) {
             MDC.put("massiveStatus", "EXCEPTION");
@@ -71,6 +42,44 @@ public class CompressionService {
             throw new RuntimeException(e);
         }
 
+    }
+
+    private void handleMessage(CompressionEvent compressionMessage) {
+        if (isCompleted(compressionMessage)) {
+            MDC.clear();
+            MDC.put("folderId", compressionMessage.getId());
+            log.info("Starting Compress Function {}", compressionMessage);
+
+            MDC.put("topic", "complete");
+            MDC.put("action", "received");
+            log.info("Received Complete Message");
+            MDC.remove("topic");
+            MDC.remove("action");
+
+            try {
+                noticeFolderService.manageFolder(
+                        PaymentNoticeGenerationRequest.builder()
+                                .id(compressionMessage.getId())
+                                .userId(compressionMessage.getUserId())
+                                .numberOfElementsFailed(compressionMessage.getNumberOfElementsFailed())
+                                .numberOfElementsTotal(compressionMessage.getNumberOfElementsTotal())
+                                .items(compressionMessage.getItems())
+                                .status(compressionMessage.getStatus())
+                                .build());
+            } catch (Exception e) {
+                var errorMsg = ErrorEvent.builder()
+                        .folderId(compressionMessage.getId())
+                        .errorId(compressionMessage.getId())
+                        .numberOfAttempts(0)
+                        .compressionError(true)
+                        .build();
+                noticeRequestErrorProducer.sendErrorEvent(errorMsg);
+                MDC.put("massiveStatus", "FAILED");
+                log.error("Massive Request FAILED", e);
+                MDC.remove("massiveStatus");
+            }
+
+        }
     }
 
     private boolean isCompleted(CompressionEvent compressionMessage) {
