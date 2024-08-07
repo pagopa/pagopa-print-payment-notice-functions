@@ -1,33 +1,28 @@
-ARG JAVA_VERSION=17
-# This image additionally contains function core tools – useful when using custom extensions
-FROM mcr.microsoft.com/azure-functions/java:4-java$JAVA_VERSION-build AS installer-env
+#
+# Build
+#
+FROM maven:3.9.6-amazoncorretto-17-al2023@sha256:4c8bd9ec72b372f587f7b9d92564a307e4f5180b7ec08455fb346617bae1757e AS buildtime
+WORKDIR /build
+COPY . .
+RUN mvn clean package -Dmaven.test.skip=true
 
-COPY . /src/java-function-app
-RUN echo $(ls -1 /src/java-function-app)
-RUN chmod 777 /src/java-function-app/agent/config.yaml
-RUN cd /src/java-function-app && \
-    wget https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/0.19.0/jmx_prometheus_javaagent-0.19.0.jar && \
-    curl -o 'opentelemetry-javaagent.jar' -L 'https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v1.25.1/opentelemetry-javaagent.jar' && \
-    mkdir -p /home/site/wwwroot && \
-    mvn clean package -Dmaven.test.skip=true && \
-    cd ./target/azure-functions/ && \
-    cd $(ls -d */|head -n 1) && \
-    cp -a . /home/site/wwwroot && \
-    cp /src/java-function-app/agent/config.yaml /home/site/wwwroot/config.yaml
-RUN chmod 777 /src/java-function-app/jmx_prometheus_javaagent-0.19.0.jar && \
-    cp /src/java-function-app/jmx_prometheus_javaagent-0.19.0.jar /home/site/wwwroot/jmx_prometheus_javaagent-0.19.0.jar
 
-RUN chmod 777 /src/java-function-app/opentelemetry-javaagent.jar && \
-    cp /src/java-function-app/opentelemetry-javaagent.jar /home/site/wwwroot/opentelemetry-javaagent.jar
+FROM amazoncorretto:17.0.10-alpine3.19@sha256:180e9c91bdbaad3599fedd2f492bf0d0335a9382835aa64669b2c2a8de7c9a22 AS builder
+COPY --from=buildtime /build/target/*.jar application.jar
+RUN java -Djarmode=layertools -jar application.jar extract
 
-# This image is ssh enabled
-#FROM mcr.microsoft.com/azure-functions/java:3.0-java$JAVA_VERSION-appservice
-# This image isn't ssh enabled
-FROM mcr.microsoft.com/azure-functions/java:4-java$JAVA_VERSION
 
-ENV AzureWebJobsScriptRoot=/home/site/wwwroot \
-    AzureFunctionsJobHost__Logging__Console__IsEnabled=true
+FROM ghcr.io/pagopa/docker-base-springboot-openjdk17:v1.1.3@sha256:a4e970ef05ecf2081424a64707e7c20856bbc40ddb3e99b32a24cd74591817c4
 
-EXPOSE 80
-EXPOSE 12345
-COPY --from=installer-env ["/home/site/wwwroot", "/home/site/wwwroot"]
+USER root
+
+COPY --chown=spring:spring  --from=builder dependencies/ ./
+COPY --chown=spring:spring  --from=builder snapshot-dependencies/ ./
+# https://github.com/moby/moby/issues/37965#issuecomment-426853382
+RUN true
+COPY --chown=spring:spring  --from=builder spring-boot-loader/ ./
+COPY --chown=spring:spring  --from=builder application/ ./
+
+EXPOSE 8080
+
+ENTRYPOINT ["java","--enable-preview","org.springframework.boot.loader.launch.JarLauncher"]

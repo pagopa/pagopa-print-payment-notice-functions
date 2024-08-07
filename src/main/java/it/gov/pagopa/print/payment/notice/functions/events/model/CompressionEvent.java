@@ -1,9 +1,8 @@
-package it.gov.pagopa.print.payment.notice.functions.entity;
+package it.gov.pagopa.print.payment.notice.functions.events.model;
 
+import it.gov.pagopa.print.payment.notice.functions.entity.PaymentGenerationRequestStatus;
 import lombok.*;
-import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.time.Instant;
 import java.util.List;
 
 @Data
@@ -12,20 +11,20 @@ import java.util.List;
 @AllArgsConstructor
 @EqualsAndHashCode(of = "id")
 @ToString
-@Document("payment_notice_generation_request")
-public class PaymentNoticeGenerationRequest {
+public class CompressionEvent {
+
 
     private String id;
 
     private String userId;
 
-    private Instant createdAt;
-
-    private Instant requestDate;
-
     private PaymentGenerationRequestStatus status;
 
     private List<String> items;
+
+    private String createdAt;
+
+    private String requestDate;
 
     private Integer numberOfElementsFailed;
 

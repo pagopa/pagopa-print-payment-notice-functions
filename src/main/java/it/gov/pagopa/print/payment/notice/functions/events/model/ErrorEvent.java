@@ -1,18 +1,14 @@
-package it.gov.pagopa.print.payment.notice.functions.entity;
+package it.gov.pagopa.print.payment.notice.functions.events.model;
 
 import lombok.*;
-import org.springframework.data.mongodb.core.mapping.Document;
-
-import java.time.Instant;
 
 @Data
-@Builder(toBuilder = true)
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(of = "errorId")
 @ToString
-@Document("payment_notice_generation_request_error")
-public class PaymentNoticeGenerationRequestError {
+public class ErrorEvent {
 
     private String id;
 
@@ -20,11 +16,11 @@ public class PaymentNoticeGenerationRequestError {
 
     private String errorId;
 
-    private Instant createdAt;
-
     private String errorCode;
 
     private String errorDescription;
+
+    private String createdAt;
 
     private String data;
 
