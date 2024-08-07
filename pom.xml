@@ -12,7 +12,7 @@
 
     <groupId>it.gov.pagopa</groupId>
     <artifactId>print-payment-notice-functions</artifactId>
-    <version>0.0.17-13-springboot</version>
+    <version>1.0.0</version>
     <name>pagopa-print-payment-notice-functions</name>
     <description>PagoPA Print Payment Notices Functions</description>
 
