@@ -6,6 +6,7 @@ import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
 import com.azure.storage.blob.models.ListBlobsOptions;
 import it.gov.pagopa.print.payment.notice.functions.model.response.BlobStorageResponse;
+import it.gov.pagopa.print.payment.notice.functions.utils.WorkingDirectoryUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,11 +14,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+
+import static it.gov.pagopa.print.payment.notice.functions.utils.WorkingDirectoryUtils.createWorkingDirectory;
 
 @Component
 @Slf4j
@@ -48,11 +51,16 @@ public class NoticeStorageClient {
     public BlobStorageResponse compressFolder(String folderId) throws IOException {
         log.info("Create Zip file. Request {}", folderId);
 
-        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+        File workingDirectory = createWorkingDirectory();
+        Path tempDirectory = Files.createTempDirectory(workingDirectory.toPath(), "notice-generation-function")
+                .normalize()
+                .toAbsolutePath();
+        File pathFile = File.createTempFile("tempFile", ".zip", tempDirectory.toFile());
 
-
-            try (ZipOutputStream zipStream = new ZipOutputStream(outputStream)) {
-//                List<CompletableFuture<Void>> futures = new ArrayList<>();
+        try {
+            try (FileOutputStream fos = new FileOutputStream(pathFile);
+                 BufferedOutputStream outputStream = new BufferedOutputStream(fos);
+                 ZipOutputStream zipStream = new ZipOutputStream(outputStream)) {
 
                 String delimiter = "/";
                 ListBlobsOptions options = new ListBlobsOptions()
@@ -73,8 +81,6 @@ public class NoticeStorageClient {
                                 log.info("Get info file {} from blob. Request {}", blobItem.getName(), folderId);
                                 final BlobClient blobClient = blobContainerClient.getBlobClient(blobItem.getName());
 
-
-//                                CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
                                 try (ByteArrayOutputStream fileOutputStream = new ByteArrayOutputStream()) {
                                     if (blobClient.exists()) {
                                         log.info("put file {} into zipStream. Request {}", blobItem.getName(), folderId);
@@ -82,6 +88,7 @@ public class NoticeStorageClient {
                                         zipStream.putNextEntry(new ZipEntry(finalSingleFileName));
                                         zipStream.write(fileOutputStream.toByteArray());
                                         zipStream.closeEntry();
+                                        zipStream.flush();
                                     } else {
                                         log.error("file not found: {}", finalSingleFileName);
                                         throw new RuntimeException("File not found: " + finalSingleFilepath);
@@ -91,22 +98,24 @@ public class NoticeStorageClient {
                                     throw new RuntimeException("Error processing file: " + finalSingleFileName, e);
                                 }
                                 log.info("Download file completed. Request {}", folderId);
-//                                });
 
-//                                futures.add(future);
 
                             }
                         });
 
-//                CompletableFuture<Void> allOf = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
-//                allOf.join();
-                // TODO : zip library is not thread-safe. Make multithread in the future with another library
+                zipStream.finish();
 
+
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+
+            try (FileInputStream fis = new FileInputStream(pathFile);
+                 BufferedInputStream bif = new BufferedInputStream(fis)) {
 
                 BlobClient zipFileClient = blobContainerClient.getBlobClient(
                         folderId + "/" + folderId.concat(".zip"));
-                zipFileClient.upload(new ByteArrayInputStream(
-                        outputStream.toByteArray()), outputStream.size(), true);
+                zipFileClient.upload(bif, true);
                 log.info("Zip file uploaded. Request {}", folderId);
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -115,6 +124,8 @@ public class NoticeStorageClient {
             BlobStorageResponse blobStorageResponse = new BlobStorageResponse();
             blobStorageResponse.setStatusCode(HttpStatus.OK.value());
             return blobStorageResponse;
+        } finally {
+            WorkingDirectoryUtils.clearTempDirectory(tempDirectory);
         }
     }
 }
