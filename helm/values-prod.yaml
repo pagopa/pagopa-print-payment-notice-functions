@@ -33,15 +33,15 @@ microservice-chart:
     path: /pagopa-print-payment-notice-functions/(.*)
     servicePort: 8080
   serviceAccount:
+    create: false
+    annotations: {}
     name: "printit-workload-identity"
-  azure:
-    workloadIdentityClientId: <workload-identity-client-id-set-automatically-by-gha>
   podAnnotations: {}
   podSecurityContext:
     seccompProfile:
       type: RuntimeDefault
   securityContext:
-    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: false
   resources:
     requests:
       memory: "512Mi"
@@ -60,12 +60,12 @@ microservice-chart:
         metadata:
           # Required
           type: Utilization # Allowed types are 'Utilization' or 'AverageValue'
-          value: "75"
+          value: "80"
   envConfig:
     WEBSITE_SITE_NAME: 'print-payment-notice-functions' # required to show cloud role name in application insights
+    FUNCTIONS_WORKER_RUNTIME: 'java'
     ENV: 'azure-prod'
-    FUNCTIONS_WORKER_RUNTIME: "java"
-    APP_LOGGING_LEVEL: 'DEBUG'
+    APP_LOGGING_LEVEL: 'INFO'
     DEFAULT_LOGGING_LEVEL: 'INFO'
     OTEL_SERVICE_NAME: 'print-payment-notice-functions'
     OTEL_RESOURCE_ATTRIBUTES: "deployment.environment=prod"
@@ -83,7 +83,6 @@ microservice-chart:
     KAFKA_NOTICE_ERROR_TOPIC: 'pagopa-printit-errors-evh'
     MAX_RETRIES_ON_ERRORS: "3"
   envSecret:
-    # required
     APPLICATIONINSIGHTS_CONNECTION_STRING: 'app-insight-connection-string'
     OTEL_EXPORTER_OTLP_HEADERS: 'elastic-apm-secret-token'
     MONGODB_CONNECTION_URI: 'notices-mongo-connection-string'
@@ -117,21 +116,7 @@ microservice-chart:
             namespaces: ["printit"]
             topologyKey: topology.kubernetes.io/zone
   canaryDelivery:
-    create: false
-    ingress:
-      create: true
-      canary:
-        type: header
-        headerName: X-Canary
-        headerValue: canary
-        weightPercent: 0
-    service:
-      create: true
     deployment:
-      create: true
       image:
-        repository: ghcr.io/pagopa/pagopa-print-payment-notice-functions
         tag: "0.0.0"
-        pullPolicy: Always
-      envConfig: {}
-      envSecret: {}
+    create: false
