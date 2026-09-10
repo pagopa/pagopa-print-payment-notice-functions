@@ -22,7 +22,7 @@ microservice-chart:
     periodSeconds: 10
   deployment:
     create: true
-    replicas: 1 # (default) same as HPA minReplica
+    replicas: 3 # (default) same as HPA minReplica
     strategy:
       type: RollingUpdate
       rollingUpdate:
@@ -57,8 +57,8 @@ microservice-chart:
       cpu: "0.5"
   autoscaling:
     enable: true
-    minReplica: 1
-    maxReplica: 1
+    minReplica: 3
+    maxReplica: 10
     pollingInterval: 10 # seconds
     cooldownPeriod: 50 # seconds
     triggers:
@@ -66,7 +66,7 @@ microservice-chart:
         metadata:
           # Required
           type: Utilization # Allowed types are 'Utilization' or 'AverageValue'
-          value: "75"
+          value: "80"
   envConfig:
     ASPNETCORE_URLS: "http://*:8080"
     WEBSITE_SITE_NAME: 'print-payment-notice-functions' # required to show cloud role name in application insights
