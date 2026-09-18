@@ -37,4 +37,13 @@ public interface PaymentGenerationRequestErrorRepository
     long incrementNumberOfAttemptsIfBelowMax(
             String id,
             int maxRetries);
+    
+    /*
+     * Deletes compression errors related to a folder after a successful
+     * compression, preserving notice-generation errors.
+     *
+     * @param folderId folder successfully compressed
+     * @return number of deleted compression error documents
+     */
+    long deleteByFolderIdAndCompressionErrorTrue(String folderId);
 }

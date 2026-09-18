@@ -44,11 +44,24 @@ public class NoticeFolderService {
         }
         log.info("created compressed file {} for User {}", paymentNoticeGenerationRequest.getId(), paymentNoticeGenerationRequest.getUserId());
 
-        paymentNoticeGenerationRequest.setStatus(paymentNoticeGenerationRequest.getNumberOfElementsFailed() != 0 ?
-                PaymentGenerationRequestStatus.PROCESSED_WITH_FAILURES :
-                PaymentGenerationRequestStatus.PROCESSED);
-        paymentGenerationRequestRepository.save(paymentNoticeGenerationRequest);
-        paymentGenerationRequestErrorRepository.deleteById(paymentNoticeGenerationRequest.getId());
+      
+        PaymentGenerationRequestStatus finalStatus = paymentNoticeGenerationRequest.getNumberOfElementsFailed() != 0
+                ? PaymentGenerationRequestStatus.PROCESSED_WITH_FAILURES
+                : PaymentGenerationRequestStatus.PROCESSED;
+
+        /*
+         * Update only the status field. 
+         * The Mongo document is shared with the other services and may contain fields not represented by this service model.
+         */
+        paymentGenerationRequestRepository.updateStatusById(paymentNoticeGenerationRequest.getId(), finalStatus);
+
+        paymentNoticeGenerationRequest.setStatus(finalStatus);
+
+        /*
+         * A successful compression makes previous compression errors obsolete.
+         */
+        deleteCompressionErrors(paymentNoticeGenerationRequest.getId());
+        
         MDC.put("massiveStatus", paymentNoticeGenerationRequest.getStatus().toString());
         log.info("Massive Request {} [user {}]", paymentNoticeGenerationRequest.getStatus(), paymentNoticeGenerationRequest.getUserId());
         MDC.remove("massiveStatus");
@@ -67,6 +80,31 @@ public class NoticeFolderService {
                     () -> new RuntimeException("Error on folder recovery"));
         } catch (Exception e) {
             throw new RequestRecoveryException(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR.value());
+        }
+    }
+    
+    /**
+     * Removes obsolete compression errors after the folder has been successfully
+     * compressed.
+     *
+     * Cleanup is best-effort: a cleanup failure must not turn an already successful
+     * compression into a new compression failure.
+     */
+    private void deleteCompressionErrors(String folderId) {
+
+        try {
+            long deletedErrors = paymentGenerationRequestErrorRepository
+                    .deleteByFolderIdAndCompressionErrorTrue(folderId);
+
+            log.debug("Deleted {} compression error records", deletedErrors);
+
+        } catch (Exception e) {
+
+            /*
+             * The ZIP has already been successfully created and the folder has reached its
+             * final status. A cleanup failure must not trigger another compression retry.
+             */
+            log.warn("Unable to delete compression error records", e);
         }
     }
 

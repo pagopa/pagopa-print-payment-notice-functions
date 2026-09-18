@@ -47,21 +47,25 @@ class CompressionServiceTest {
 
     @Test
     void compressFolder() throws IOException {
+
         String folderId = "123456789";
+
         BlobStorageResponse mock = mock(BlobStorageResponse.class);
         when(mock.getStatusCode()).thenReturn(200);
+
         when(noticeStorageClient.compressFolder(folderId)).thenReturn(mock);
-        var elem = CompressionEvent.builder()
-                .id(folderId)
-                .status(PaymentGenerationRequestStatus.COMPLETING)
-                .userId("comune di roma")
-                .numberOfElementsFailed(0)
-                .numberOfElementsTotal(2)
-                .items(List.of("11", "22"))
+
+        var elem = CompressionEvent.builder().id(folderId).status(PaymentGenerationRequestStatus.COMPLETING)
+                .userId("comune di roma").numberOfElementsFailed(0).numberOfElementsTotal(2).items(List.of("11", "22"))
                 .build();
+
         var message = List.of(new ObjectMapper().writeValueAsString(elem));
+
         compressionService.compressFolder(message);
-        verify(paymentGenerationRequestRepository).save(any());
+
+        verify(paymentGenerationRequestRepository).updateStatusById(folderId, PaymentGenerationRequestStatus.PROCESSED);
+        verify(paymentGenerationRequestRepository, never()).save(any());
+        verify(paymentGenerationRequestErrorRepository).deleteByFolderIdAndCompressionErrorTrue(folderId);
     }
 
     @Test
@@ -81,5 +85,7 @@ class CompressionServiceTest {
         var message = List.of(new ObjectMapper().writeValueAsString(elem));
         compressionService.compressFolder(message);
         verify(noticeRequestErrorProducer).sendErrorEvent(any());
+        verify(paymentGenerationRequestRepository, never()).updateStatusById(any(), any());
+        verify(paymentGenerationRequestErrorRepository, never()).deleteByFolderIdAndCompressionErrorTrue(any());
     }
 }
