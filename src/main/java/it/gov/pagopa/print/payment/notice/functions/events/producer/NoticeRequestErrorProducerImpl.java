@@ -34,7 +34,11 @@ public class NoticeRequestErrorProducerImpl implements NoticeRequestErrorProduce
 
         MDC.put("topic", "complete");
         MDC.put("action", "sent");
-        log.info("Complete Message Retry Sent");
+        if (res) {
+            log.info("Error Message Sent");
+        } else {
+            log.error("Unable to send Error Message");
+        }
         MDC.remove("topic");
         MDC.remove("action");
 

@@ -67,18 +67,23 @@ public class CompressionService {
                                 .status(compressionMessage.getStatus())
                                 .build());
             } catch (Exception e) {
-                var errorMsg = ErrorEvent.builder()
-                        .folderId(compressionMessage.getId())
-                        .errorId(compressionMessage.getId())
-                        .numberOfAttempts(0)
-                        .compressionError(true)
-                        .build();
-                noticeRequestErrorProducer.sendErrorEvent(errorMsg);
+                var errorMsg = ErrorEvent.builder().folderId(compressionMessage.getId())
+                        .errorId(compressionMessage.getId()).numberOfAttempts(0).compressionError(true).build();
+
+                boolean errorEventSent = noticeRequestErrorProducer.sendErrorEvent(errorMsg);
+
+                if (!errorEventSent) {
+                    /*
+                     * The compression failed and the corresponding error event could not be
+                     * published; propagate the failure.
+                     */
+                    throw new IllegalStateException("Unable to publish compression error event");
+                }
+
                 MDC.put("massiveStatus", "FAILED");
                 log.error("Massive Request FAILED", e);
                 MDC.remove("massiveStatus");
             }
-
         }
     }
 

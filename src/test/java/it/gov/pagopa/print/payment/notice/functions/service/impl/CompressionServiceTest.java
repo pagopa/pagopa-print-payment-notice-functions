@@ -18,6 +18,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import java.io.IOException;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -74,6 +75,7 @@ class CompressionServiceTest {
         BlobStorageResponse mock = mock(BlobStorageResponse.class);
         when(mock.getStatusCode()).thenReturn(400);
         when(noticeStorageClient.compressFolder(folderId)).thenReturn(mock);
+        when(noticeRequestErrorProducer.sendErrorEvent(any())).thenReturn(true);
         var elem = CompressionEvent.builder()
                 .id(folderId)
                 .status(PaymentGenerationRequestStatus.COMPLETING)
@@ -87,5 +89,45 @@ class CompressionServiceTest {
         verify(noticeRequestErrorProducer).sendErrorEvent(any());
         verify(paymentGenerationRequestRepository, never()).updateStatusById(any(), any());
         verify(paymentGenerationRequestErrorRepository, never()).deleteByFolderIdAndCompressionErrorTrue(any());
+    }
+    
+    @Test
+    void compressFolderShouldFailWhenErrorEventCannotBePublished() throws IOException {
+        String folderId = "123456789";
+        BlobStorageResponse mock = mock(BlobStorageResponse.class);
+        when(mock.getStatusCode()).thenReturn(400);
+        when(noticeStorageClient.compressFolder(folderId)).thenReturn(mock);
+
+        /*
+         * Simulate a binding failure where StreamBridge does not throw an exception but
+         * reports that the message was not sent.
+         */
+        when(noticeRequestErrorProducer.sendErrorEvent(any())).thenReturn(false);
+
+        var elem = CompressionEvent.builder().id(folderId).status(PaymentGenerationRequestStatus.COMPLETING)
+                .userId("comune di roma").numberOfElementsFailed(0).numberOfElementsTotal(2).items(List.of("11", "22"))
+                .build();
+
+        var message = List.of(new ObjectMapper().writeValueAsString(elem));
+        assertThrows(RuntimeException.class, () -> compressionService.compressFolder(message));
+        verify(noticeRequestErrorProducer).sendErrorEvent(any());
+        verify(paymentGenerationRequestRepository, never()).updateStatusById(any(), any());
+    }
+    
+    @Test
+    void compressFolderShouldFailWhenErrorEventPublicationThrowsException() throws IOException {
+        String folderId = "123456789";
+        BlobStorageResponse mock = mock(BlobStorageResponse.class);
+        when(mock.getStatusCode()).thenReturn(400);
+        when(noticeStorageClient.compressFolder(folderId)).thenReturn(mock);
+        doThrow(new RuntimeException("Event Hub unavailable")).when(noticeRequestErrorProducer).sendErrorEvent(any());
+
+        var elem = CompressionEvent.builder().id(folderId).status(PaymentGenerationRequestStatus.COMPLETING)
+                .userId("comune di roma").numberOfElementsFailed(0).numberOfElementsTotal(2).items(List.of("11", "22"))
+                .build();
+
+        var message = List.of(new ObjectMapper().writeValueAsString(elem));
+        assertThrows(RuntimeException.class, () -> compressionService.compressFolder(message));
+        verify(noticeRequestErrorProducer).sendErrorEvent(any());
     }
 }
