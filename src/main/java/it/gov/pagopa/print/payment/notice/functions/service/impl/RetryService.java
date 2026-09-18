@@ -130,7 +130,11 @@ public class RetryService {
 
     private CompressionEvent buildCompressionError(ErrorEvent error) throws RequestRecoveryException {
 
-        PaymentNoticeGenerationRequest paymentNoticeGenerationRequest = noticeFolderService.findRequest(error.getId());
+        /*
+         * Compression errors are related to the massive-generation folder.
+         * The folderId field is the one that identifies the request that must be compressed again.
+         */
+        PaymentNoticeGenerationRequest paymentNoticeGenerationRequest = noticeFolderService.findRequest(error.getFolderId());
         if (paymentNoticeGenerationRequest.getStatus().equals(PaymentGenerationRequestStatus.COMPLETING)) {
             return CompressionEvent
                     .builder()
