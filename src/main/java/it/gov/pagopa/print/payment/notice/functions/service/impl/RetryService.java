@@ -68,20 +68,23 @@ public class RetryService {
             var paymentNoticeGenerationRequestError = findErrorOrCreate(retryMessage);
 
 
-            if (paymentNoticeGenerationRequestError != null && retryMessage.getNumberOfAttempts() < maxRetriesOnErrors) {
-
-                updateNumberOfAttempts(paymentNoticeGenerationRequestError);
+            if (paymentNoticeGenerationRequestError != null
+                    && acquireRetryAttempt(paymentNoticeGenerationRequestError)) {
 
                 if (isCompressionError(retryMessage, paymentNoticeGenerationRequestError)) {
+
                     CompressionEvent compressionEvent = buildCompressionError(retryMessage);
+
                     noticeRequestCompleteProducer.sendNoticeComplete(compressionEvent);
+
                     log.debug("Sent a new compression event");
 
                 } else {
+
                     GenerationEvent generationEvent = buildNoticeRetry(retryMessage);
+
                     noticeGenerationRequestProducer.sendGenerationEvent(generationEvent);
-                    // TODO verify if it works instead send new event
-//                    compressionService.compressFolder(new ObjectMapper().writeValueAsString(generationEvent));
+
                     log.debug("Sent a new generation event");
                 }
             }
@@ -94,43 +97,71 @@ public class RetryService {
         }
     }
 
-    private void updateNumberOfAttempts(PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError) {
-        int numberOfAttempts = paymentNoticeGenerationRequestError.getNumberOfAttempts() + 1;
-        var entity = paymentNoticeGenerationRequestError.toBuilder()
-                .numberOfAttempts(numberOfAttempts)
-                .build();
-        paymentGenerationRequestErrorRepository.save(entity);
-        log.debug("Updated Number Of Attempts");
+    /**
+     * Atomically acquires the next retry attempt.
+     *
+     * Mongo is the source of truth for the retry counter. The update succeeds only
+     * while numberOfAttempts is lower than the configured maximum, preventing
+     * duplicate or concurrent deliveries from exceeding the retry limit.
+     */
+    private boolean acquireRetryAttempt(PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError) {
+
+        long updated = paymentGenerationRequestErrorRepository
+                .incrementNumberOfAttemptsIfBelowMax(paymentNoticeGenerationRequestError.getId(), maxRetriesOnErrors);
+
+        if (updated == 0) {
+            log.warn("Maximum number of retry attempts reached");
+            return false;
+        }
+
+        log.debug("Acquired retry attempt");
+        return true;
     }
 
     private boolean isCompressionError(ErrorEvent retryMessage, PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError) {
         return retryMessage.isCompressionError() && !"UNKNOWN".equals(paymentNoticeGenerationRequestError.getFolderId());
     }
 
-    private PaymentNoticeGenerationRequestError findErrorOrCreate(ErrorEvent retryMessage) throws PaymentNoticeManagementException {
-        PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError;
+    private PaymentNoticeGenerationRequestError findErrorOrCreate(ErrorEvent retryMessage)
+            throws PaymentNoticeManagementException {
+
         if (retryMessage.getId() != null) {
-            paymentNoticeGenerationRequestError = paymentGenerationRequestErrorRepository.findById(retryMessage.getId())
-                    .orElseThrow(() -> new PaymentNoticeManagementException("Request retryMessage not found", HttpStatus.INTERNAL_SERVER_ERROR.value()));
-        } else {
-            paymentNoticeGenerationRequestError = PaymentNoticeGenerationRequestError.builder()
-                    .folderId(retryMessage.getFolderId())
-                    .errorId(retryMessage.getErrorId())
-                    .numberOfAttempts(retryMessage.getNumberOfAttempts())
-                    .compressionError(retryMessage.isCompressionError())
-                    .data(retryMessage.getData())
-                    .errorCode(retryMessage.getErrorCode())
-                    .errorDescription(retryMessage.getErrorDescription())
-                    .build();
-            var entity = paymentGenerationRequestErrorRepository.save(paymentNoticeGenerationRequestError);
-            paymentNoticeGenerationRequestError.setId(entity.getId());
+
+            return paymentGenerationRequestErrorRepository.findById(retryMessage.getId())
+                    .orElseThrow(() -> new PaymentNoticeManagementException("Request retryMessage not found",
+                            HttpStatus.INTERNAL_SERVER_ERROR.value()));
         }
-        return paymentNoticeGenerationRequestError;
+
+        /*
+         * Reuse the error already associated with the folder instead of
+         * creating a new record with numberOfAttempts reset to zero.
+         */
+        if (retryMessage.isCompressionError()) {
+
+            var existingCompressionError = paymentGenerationRequestErrorRepository
+                    .findTopByFolderIdAndCompressionErrorTrueOrderByNumberOfAttemptsDesc(retryMessage.getFolderId());
+
+            if (existingCompressionError.isPresent()) {
+                return existingCompressionError.get();
+            }
+        }
+
+        PaymentNoticeGenerationRequestError newError = PaymentNoticeGenerationRequestError.builder()
+                .folderId(retryMessage.getFolderId()).errorId(retryMessage.getErrorId())
+                .numberOfAttempts(retryMessage.getNumberOfAttempts() != null ? retryMessage.getNumberOfAttempts() : 0)
+                .compressionError(retryMessage.isCompressionError()).data(retryMessage.getData())
+                .errorCode(retryMessage.getErrorCode()).errorDescription(retryMessage.getErrorDescription()).build();
+
+        return paymentGenerationRequestErrorRepository.save(newError);
     }
 
     private CompressionEvent buildCompressionError(ErrorEvent error) throws RequestRecoveryException {
 
-        PaymentNoticeGenerationRequest paymentNoticeGenerationRequest = noticeFolderService.findRequest(error.getId());
+        /*
+         * Compression errors are related to the massive-generation folder.
+         * The folderId field is the one that identifies the request that must be compressed again.
+         */
+        PaymentNoticeGenerationRequest paymentNoticeGenerationRequest = noticeFolderService.findRequest(error.getFolderId());
         if (paymentNoticeGenerationRequest.getStatus().equals(PaymentGenerationRequestStatus.COMPLETING)) {
             return CompressionEvent
                     .builder()
