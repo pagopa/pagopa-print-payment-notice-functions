@@ -38,7 +38,7 @@ public interface PaymentGenerationRequestErrorRepository
             String id,
             int maxRetries);
     
-    /*
+    /**
      * Deletes compression errors related to a folder after a successful
      * compression, preserving notice-generation errors.
      *
