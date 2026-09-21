@@ -230,12 +230,18 @@ public class RetryService {
      * Compensates a previously acquired retry attempt.
      */
     private void releaseRetryAttempt(PaymentNoticeGenerationRequestError error) {
-        long updated = paymentGenerationRequestErrorRepository
-                .decrementNumberOfAttemptsIfGreaterThanZero(error.getId());
-        if (updated == 0) {
-            log.error("Unable to release acquired retry attempt");
-        } else {
-            log.debug("Released acquired retry attempt");
+        try {
+            long updated = paymentGenerationRequestErrorRepository
+                    .decrementNumberOfAttemptsIfGreaterThanZero(error.getId());
+
+            if (updated == 0) {
+                log.error("Unable to release acquired retry attempt");
+            } else {
+                log.debug("Released acquired retry attempt");
+            }
+
+        } catch (Exception e) {
+            log.error("Unable to release acquired retry attempt", e);
         }
     }
 }

@@ -32,7 +32,7 @@ public class NoticeRequestErrorProducerImpl implements NoticeRequestErrorProduce
         var res = streamBridge.send("noticeError-out-0",
                 buildMessage(paymentNoticeGenerationRequestError));
 
-        MDC.put("topic", "complete");
+        MDC.put("topic", "error");
         MDC.put("action", "sent");
         if (res) {
             log.info("Error Message Sent");

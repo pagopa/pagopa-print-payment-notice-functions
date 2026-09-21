@@ -77,7 +77,7 @@ public class CompressionService {
                      * The compression failed and the corresponding error event could not be
                      * published; propagate the failure.
                      */
-                    throw new IllegalStateException("Unable to publish compression error event");
+                    throw new IllegalStateException("Unable to publish compression error event", e);
                 }
 
                 MDC.put("massiveStatus", "FAILED");

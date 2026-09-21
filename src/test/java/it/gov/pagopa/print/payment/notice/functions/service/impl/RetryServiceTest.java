@@ -389,4 +389,35 @@ class RetryServiceTest {
         // No compensation is required because no retry attempt was acquired.
         verify(paymentGenerationRequestErrorRepository, never()).decrementNumberOfAttemptsIfGreaterThanZero(any());
     }
+    
+    @Test
+    void retryCompressionShouldPropagatePublicationFailureWhenCompensationFails() throws JsonProcessingException {
+
+        var persistedError = PaymentNoticeGenerationRequestError.builder().id("compression-error-1").folderId("123456")
+                .errorId("123456").numberOfAttempts(0).compressionError(true).build();
+
+        when(paymentGenerationRequestErrorRepository
+                .findTopByFolderIdAndCompressionErrorTrueOrderByNumberOfAttemptsDesc("123456"))
+                .thenReturn(Optional.of(persistedError));
+        when(paymentGenerationRequestRepository.findById("123456"))
+                .thenReturn(Optional.of(PaymentNoticeGenerationRequest.builder().id("123456").userId("user")
+                        .status(PaymentGenerationRequestStatus.COMPLETING).items(List.of("1")).numberOfElementsFailed(0)
+                        .numberOfElementsTotal(1).build()));
+        when(paymentGenerationRequestErrorRepository.incrementNumberOfAttemptsIfBelowMax("compression-error-1", 3))
+                .thenReturn(1L);
+        when(noticeRequestCompleteProducer.sendNoticeComplete(any())).thenReturn(false);
+        when(paymentGenerationRequestErrorRepository.decrementNumberOfAttemptsIfGreaterThanZero("compression-error-1"))
+                .thenThrow(new RuntimeException("Mongo unavailable"));
+
+        var event = ErrorEvent.builder().folderId("123456").errorId("123456").numberOfAttempts(0).compressionError(true)
+                .build();
+
+        String message = new ObjectMapper().writeValueAsString(event);
+
+        assertThrows(RetryEventPublicationException.class, () -> retryService.retryError(message));
+
+        verify(noticeRequestCompleteProducer).sendNoticeComplete(any());
+        verify(paymentGenerationRequestErrorRepository)
+                .decrementNumberOfAttemptsIfGreaterThanZero("compression-error-1");
+    }
 }
