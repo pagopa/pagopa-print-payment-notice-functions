@@ -18,30 +18,32 @@ import java.util.function.Supplier;
 @Slf4j
 public class NoticeGenerationRequestProducerImpl implements NoticeGenerationRequestProducer {
 
+    private static final String MDC_TOPIC = "topic";
+    private static final String MDC_ACTION = "action";
+
     @Autowired
     private StreamBridge streamBridge;
 
-
-    public static Message<GenerationEvent> buildMessage(
-            GenerationEvent noticeGenerationRequestEH) {
+    public static Message<GenerationEvent> buildMessage(GenerationEvent noticeGenerationRequestEH) {
         return MessageBuilder.withPayload(noticeGenerationRequestEH).build();
     }
 
     @Override
     public boolean sendGenerationEvent(GenerationEvent noticeGenerationRequestEH) {
-        var res = streamBridge.send("noticeGeneration-out-0",
-                buildMessage(noticeGenerationRequestEH));
+        var res = streamBridge.send("noticeGeneration-out-0", buildMessage(noticeGenerationRequestEH));
 
+        MDC.put(MDC_TOPIC, "generation");
 
-        MDC.put("topic", "generation");
-        MDC.put("action", "sent");
         if (res) {
+            MDC.put(MDC_ACTION, "sent");
             log.info("Generation Message Retry Sent");
         } else {
+            MDC.put(MDC_ACTION, "failed");
             log.error("Unable to send Generation Message Retry");
         }
-        MDC.remove("topic");
-        MDC.remove("action");
+
+        MDC.remove(MDC_TOPIC);
+        MDC.remove(MDC_ACTION);
 
         return res;
     }
@@ -54,10 +56,8 @@ public class NoticeGenerationRequestProducerImpl implements NoticeGenerationRequ
     static class NoticeGenerationRequestProducerConfig {
 
         @Bean
-        public Supplier<Flux<Message<GenerationEvent>>> sendGenerationEvent() {
+        Supplier<Flux<Message<GenerationEvent>>> sendGenerationEvent() {
             return Flux::empty;
         }
-
     }
-
 }
