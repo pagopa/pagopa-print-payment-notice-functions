@@ -35,7 +35,11 @@ public class NoticeGenerationRequestProducerImpl implements NoticeGenerationRequ
 
         MDC.put("topic", "generation");
         MDC.put("action", "sent");
-        log.info("Generation Message Retry Sent");
+        if (res) {
+            log.info("Generation Message Retry Sent");
+        } else {
+            log.error("Unable to send Generation Message Retry");
+        }
         MDC.remove("topic");
         MDC.remove("action");
 

@@ -13,10 +13,14 @@ import it.gov.pagopa.print.payment.notice.functions.events.producer.NoticeReques
 import it.gov.pagopa.print.payment.notice.functions.exception.Aes256Exception;
 import it.gov.pagopa.print.payment.notice.functions.exception.PaymentNoticeManagementException;
 import it.gov.pagopa.print.payment.notice.functions.exception.RequestRecoveryException;
+import it.gov.pagopa.print.payment.notice.functions.exception.RetryEventPublicationException;
 import it.gov.pagopa.print.payment.notice.functions.repository.PaymentGenerationRequestErrorRepository;
 import it.gov.pagopa.print.payment.notice.functions.utils.Aes256Utils;
 import it.gov.pagopa.print.payment.notice.functions.utils.ObjectMapperUtils;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.function.Supplier;
+
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,9 +45,6 @@ public class RetryService {
 
     @Autowired
     private NoticeRequestCompleteProducer noticeRequestCompleteProducer;
-
-    @Autowired
-    private CompressionService compressionService;
 
     @Autowired
     private PaymentGenerationRequestErrorRepository paymentGenerationRequestErrorRepository;
@@ -72,24 +73,26 @@ public class RetryService {
                     && acquireRetryAttempt(paymentNoticeGenerationRequestError)) {
 
                 if (isCompressionError(retryMessage, paymentNoticeGenerationRequestError)) {
-
                     CompressionEvent compressionEvent = buildCompressionError(retryMessage);
-
-                    noticeRequestCompleteProducer.sendNoticeComplete(compressionEvent);
-
+                    publishRetryOrReleaseAttempt(paymentNoticeGenerationRequestError,
+                            () -> noticeRequestCompleteProducer.sendNoticeComplete(compressionEvent));
                     log.debug("Sent a new compression event");
-
                 } else {
 
                     GenerationEvent generationEvent = buildNoticeRetry(retryMessage);
-
-                    noticeGenerationRequestProducer.sendGenerationEvent(generationEvent);
-
+                    publishRetryOrReleaseAttempt(paymentNoticeGenerationRequestError,
+                            () -> noticeGenerationRequestProducer.sendGenerationEvent(generationEvent));
                     log.debug("Sent a new generation event");
                 }
             }
 
 
+        } catch (RetryEventPublicationException e) {
+            MDC.put("massiveStatus", "EXCEPTION");
+            log.error("Retry Event Publication Error", e);
+            MDC.remove("massiveStatus");
+            // The retry event could not be published; propagate the failure to the caller.
+            throw e;
         } catch (Exception e) {
             MDC.put("massiveStatus", "EXCEPTION");
             log.error("Retry Error", e);
@@ -185,6 +188,50 @@ public class RetryService {
         noticeRequestEH.setErrorId(error.getId());
         return noticeRequestEH;
     }
+    
+    /**
+     * Publishes a retry event after a retry attempt has been acquired.
+     *
+     * If publication fails, the previously acquired attempt is released so that a
+     * subsequent delivery can retry without consuming the configured limit.
+     *
+     * @param error     persisted error containing the retry counter
+     * @param publisher operation used to publish the retry event
+     * @throws RetryEventPublicationException if the retry event cannot be published
+     */
+    private void publishRetryOrReleaseAttempt(PaymentNoticeGenerationRequestError error, Supplier<Boolean> publisher) {
+        boolean sent;
+        try {
+            sent = publisher.get();
+        } catch (Exception e) {
 
-
+            /*
+             * The retry event was not successfully published. Release the retry slot
+             * acquired immediately before this operation.
+             */
+            releaseRetryAttempt(error);
+            throw new RetryEventPublicationException(e);
+        }
+        if (!sent) {
+            /*
+             * StreamBridge may report a failed send without throwing an exception. Release
+             * the acquired retry slot in this case as well.
+             */
+            releaseRetryAttempt(error);
+            throw new RetryEventPublicationException();
+        }
+    }
+    
+    /*
+     * Compensates a previously acquired retry attempt.
+     */
+    private void releaseRetryAttempt(PaymentNoticeGenerationRequestError error) {
+        long updated = paymentGenerationRequestErrorRepository
+                .decrementNumberOfAttemptsIfGreaterThanZero(error.getId());
+        if (updated == 0) {
+            log.error("Unable to release acquired retry attempt");
+        } else {
+            log.debug("Released acquired retry attempt");
+        }
+    }
 }

@@ -38,6 +38,14 @@ public interface PaymentGenerationRequestErrorRepository
             String id,
             int maxRetries);
     
+    /*
+     * Releases a previously acquired retry attempt when the retry event
+     * could not be published.
+     */
+    @Query("{ '_id': ?0, 'numberOfAttempts': { '$gt': 0 } }")
+    @Update("{ '$inc': { 'numberOfAttempts': -1 } }")
+    long decrementNumberOfAttemptsIfGreaterThanZero(String id);
+    
     /**
      * Deletes compression errors related to a folder after a successful
      * compression, preserving notice-generation errors.
