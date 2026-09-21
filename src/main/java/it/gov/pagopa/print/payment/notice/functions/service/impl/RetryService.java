@@ -66,28 +66,35 @@ public class RetryService {
             log.info("Error Complete Message");
             MDC.remove("topic");
             MDC.remove("action");
+            
+            if (isCompressionError(retryMessage)) {
+                // Before consuming a retry attempt, verify that the folder still needs compression.
+                CompressionEvent compressionEvent = buildCompressionError(retryMessage);
 
+                if (compressionEvent == null) {
+                    log.info("Skipping compression retry because the folder is no longer in COMPLETING status");
+                    return;
+                }
+                var paymentNoticeGenerationRequestError = findErrorOrCreate(retryMessage);
+                if (paymentNoticeGenerationRequestError != null
+                        && acquireRetryAttempt(paymentNoticeGenerationRequestError)) {
 
-            var paymentNoticeGenerationRequestError = findErrorOrCreate(retryMessage);
-
-
-            if (paymentNoticeGenerationRequestError != null
-                    && acquireRetryAttempt(paymentNoticeGenerationRequestError)) {
-
-                if (isCompressionError(retryMessage, paymentNoticeGenerationRequestError)) {
-                    CompressionEvent compressionEvent = buildCompressionError(retryMessage);
                     publishRetryOrReleaseAttempt(paymentNoticeGenerationRequestError,
                             () -> noticeRequestCompleteProducer.sendNoticeComplete(compressionEvent));
                     log.debug("Sent a new compression event");
-                } else {
+                }
 
+            } else {
+                var paymentNoticeGenerationRequestError = findErrorOrCreate(retryMessage);
+                if (paymentNoticeGenerationRequestError != null) {
                     GenerationEvent generationEvent = buildNoticeRetry(retryMessage);
-                    publishRetryOrReleaseAttempt(paymentNoticeGenerationRequestError,
-                            () -> noticeGenerationRequestProducer.sendGenerationEvent(generationEvent));
-                    log.debug("Sent a new generation event");
+                    if (acquireRetryAttempt(paymentNoticeGenerationRequestError)) {
+                        publishRetryOrReleaseAttempt(paymentNoticeGenerationRequestError,
+                                () -> noticeGenerationRequestProducer.sendGenerationEvent(generationEvent));
+                        log.debug("Sent a new generation event");
+                    }
                 }
             }
-
 
         } catch (RetryEventPublicationException e) {
             MDC.put(MDC_MASSIVE_STATUS, "EXCEPTION");
@@ -123,8 +130,8 @@ public class RetryService {
         return true;
     }
 
-    private boolean isCompressionError(ErrorEvent retryMessage, PaymentNoticeGenerationRequestError paymentNoticeGenerationRequestError) {
-        return retryMessage.isCompressionError() && !"UNKNOWN".equals(paymentNoticeGenerationRequestError.getFolderId());
+    private boolean isCompressionError(ErrorEvent retryMessage) {
+        return retryMessage.isCompressionError() && !"UNKNOWN".equals(retryMessage.getFolderId());
     }
 
     private PaymentNoticeGenerationRequestError findErrorOrCreate(ErrorEvent retryMessage)
@@ -167,17 +174,12 @@ public class RetryService {
          * The folderId field is the one that identifies the request that must be compressed again.
          */
         PaymentNoticeGenerationRequest paymentNoticeGenerationRequest = noticeFolderService.findRequest(error.getFolderId());
-        if (paymentNoticeGenerationRequest.getStatus().equals(PaymentGenerationRequestStatus.COMPLETING)) {
-            return CompressionEvent
-                    .builder()
-                    .id(paymentNoticeGenerationRequest.getId())
-                    .numberOfElementsTotal(paymentNoticeGenerationRequest
-                            .getNumberOfElementsTotal())
-                    .numberOfElementsFailed(paymentNoticeGenerationRequest
-                            .getNumberOfElementsFailed())
+        if (PaymentGenerationRequestStatus.COMPLETING.equals(paymentNoticeGenerationRequest.getStatus())) {
+            return CompressionEvent.builder().id(paymentNoticeGenerationRequest.getId())
+                    .numberOfElementsTotal(paymentNoticeGenerationRequest.getNumberOfElementsTotal())
+                    .numberOfElementsFailed(paymentNoticeGenerationRequest.getNumberOfElementsFailed())
                     .status(paymentNoticeGenerationRequest.getStatus())
-                    .userId(paymentNoticeGenerationRequest.getUserId())
-                    .items(paymentNoticeGenerationRequest.getItems())
+                    .userId(paymentNoticeGenerationRequest.getUserId()).items(paymentNoticeGenerationRequest.getItems())
                     .build();
         }
         return null;

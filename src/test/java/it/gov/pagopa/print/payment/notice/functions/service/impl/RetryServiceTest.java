@@ -37,7 +37,7 @@ class RetryServiceTest {
     NoticeRequestCompleteProducer noticeRequestCompleteProducer;
 
     @MockBean
-    NoticeGenerationRequestProducer NoticeGenerationRequestProducer;
+    NoticeGenerationRequestProducer noticeGenerationRequestProducer;
 
     @MockBean
     PaymentGenerationRequestRepository paymentGenerationRequestRepository;
@@ -63,7 +63,7 @@ class RetryServiceTest {
                 .compressionError(false)
                 .build()));
 
-        when(NoticeGenerationRequestProducer.sendGenerationEvent(any())).thenReturn(true);
+        when(noticeGenerationRequestProducer.sendGenerationEvent(any())).thenReturn(true);
         when(paymentGenerationRequestErrorRepository.incrementNumberOfAttemptsIfBelowMax("1", 3)).thenReturn(1L);
         
 
@@ -83,7 +83,7 @@ class RetryServiceTest {
         verify(paymentGenerationRequestErrorRepository, times(1)).incrementNumberOfAttemptsIfBelowMax("1", 3);
         verify(paymentGenerationRequestErrorRepository, never()).save(any());
         verify(noticeRequestCompleteProducer, never()).sendNoticeComplete(any());
-        verify(NoticeGenerationRequestProducer, times(1)).sendGenerationEvent(any());
+        verify(noticeGenerationRequestProducer, times(1)).sendGenerationEvent(any());
 
     }
 
@@ -165,7 +165,7 @@ class RetryServiceTest {
         verify(noticeRequestCompleteProducer, times(1))
                 .sendNoticeComplete(any());
 
-        verify(NoticeGenerationRequestProducer, never())
+        verify(noticeGenerationRequestProducer, never())
                 .sendGenerationEvent(any());
     }
     
@@ -223,7 +223,7 @@ class RetryServiceTest {
         // Only three actual compression retries are emitted.
         verify(noticeRequestCompleteProducer, times(3)).sendNoticeComplete(any());
 
-        verify(NoticeGenerationRequestProducer, never()).sendGenerationEvent(any());
+        verify(noticeGenerationRequestProducer, never()).sendGenerationEvent(any());
     }
     
     @Test
@@ -281,7 +281,7 @@ class RetryServiceTest {
         when(paymentGenerationRequestErrorRepository.incrementNumberOfAttemptsIfBelowMax("1", 3)).thenReturn(1L);
 
         // Simulate a publication failure reported by the producer without throwing an exception.
-        when(NoticeGenerationRequestProducer.sendGenerationEvent(any())).thenReturn(false);
+        when(noticeGenerationRequestProducer.sendGenerationEvent(any())).thenReturn(false);
         when(paymentGenerationRequestErrorRepository.decrementNumberOfAttemptsIfGreaterThanZero("1")).thenReturn(1L);
 
         var generationEvent = GenerationEvent.builder().build();
@@ -299,7 +299,7 @@ class RetryServiceTest {
         verify(paymentGenerationRequestErrorRepository, times(1)).incrementNumberOfAttemptsIfBelowMax("1", 3);
 
         // The generation retry is actually attempted.
-        verify(NoticeGenerationRequestProducer, times(1)).sendGenerationEvent(any());
+        verify(noticeGenerationRequestProducer, times(1)).sendGenerationEvent(any());
 
         // Since publication failed, the acquired retry slot must be released.
         verify(paymentGenerationRequestErrorRepository, times(1)).decrementNumberOfAttemptsIfGreaterThanZero("1");
@@ -309,5 +309,84 @@ class RetryServiceTest {
         
         // No document must be saved.
         verify(paymentGenerationRequestErrorRepository, never()).save(any());
+    }
+    
+    @Test
+    void retryCompressionShouldBeSkippedWhenFolderIsNoLongerCompleting() throws JsonProcessingException {
+
+        var persistedError = PaymentNoticeGenerationRequestError.builder().id("compression-error-1").folderId("123456")
+                .errorId("123456").numberOfAttempts(1).compressionError(true).build();
+
+        // The compression error already exists in Mongo.
+        when(paymentGenerationRequestErrorRepository
+                .findTopByFolderIdAndCompressionErrorTrueOrderByNumberOfAttemptsDesc("123456"))
+                .thenReturn(Optional.of(persistedError));
+
+        /*
+         * Simulate a duplicate ErrorEvent arriving after another execution has already
+         * completed the folder.
+         */
+        when(paymentGenerationRequestRepository.findById("123456"))
+                .thenReturn(Optional.of(PaymentNoticeGenerationRequest.builder().id("123456").userId("user")
+                        .status(PaymentGenerationRequestStatus.PROCESSED).items(List.of("1")).numberOfElementsFailed(0)
+                        .numberOfElementsTotal(1).build()));
+
+        var event = ErrorEvent.builder().folderId("123456").errorId("123456").numberOfAttempts(0).compressionError(true)
+                .build();
+
+        String message = new ObjectMapper().writeValueAsString(event);
+
+        retryService.retryError(message);
+
+        verify(paymentGenerationRequestErrorRepository, never()).incrementNumberOfAttemptsIfBelowMax(any(), anyInt());
+
+        // No new compression retry must be published.
+        verify(noticeRequestCompleteProducer, never()).sendNoticeComplete(any());
+
+        /*
+         * It is a compression error, the generation producer must not be involved
+         * either.
+         */
+        verify(noticeGenerationRequestProducer, never()).sendGenerationEvent(any());
+
+        // No compensation is required because no retry attempt was acquired.
+        verify(paymentGenerationRequestErrorRepository, never()).decrementNumberOfAttemptsIfGreaterThanZero(any());
+    }
+    
+    @Test
+    void retryCompressionShouldNotCreateErrorWhenFolderIsAlreadyProcessed() throws JsonProcessingException {
+
+        /*
+         * Simulate a stale compression ErrorEvent received after the folder has already
+         * been successfully processed.
+         */
+        when(paymentGenerationRequestRepository.findById("123456"))
+                .thenReturn(Optional.of(PaymentNoticeGenerationRequest.builder().id("123456").userId("user")
+                        .status(PaymentGenerationRequestStatus.PROCESSED).items(List.of("1")).numberOfElementsFailed(0)
+                        .numberOfElementsTotal(1).build()));
+
+        var event = ErrorEvent.builder().folderId("123456").errorId("123456").numberOfAttempts(0).compressionError(true)
+                .build();
+
+        String message = new ObjectMapper().writeValueAsString(event);
+
+        retryService.retryError(message);
+
+        // The folder state is checked before accessing the error repository.
+        verify(paymentGenerationRequestErrorRepository, never())
+                .findTopByFolderIdAndCompressionErrorTrueOrderByNumberOfAttemptsDesc(any());
+
+        verify(paymentGenerationRequestErrorRepository, never()).save(any());
+
+        // No retry slot must be consumed.
+        verify(paymentGenerationRequestErrorRepository, never()).incrementNumberOfAttemptsIfBelowMax(any(), anyInt());
+
+        // No retry event must be published.
+        verify(noticeRequestCompleteProducer, never()).sendNoticeComplete(any());
+
+        verify(noticeGenerationRequestProducer, never()).sendGenerationEvent(any());
+
+        // No compensation is required because no retry attempt was acquired.
+        verify(paymentGenerationRequestErrorRepository, never()).decrementNumberOfAttemptsIfGreaterThanZero(any());
     }
 }
