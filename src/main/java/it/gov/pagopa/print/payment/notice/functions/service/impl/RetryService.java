@@ -19,7 +19,7 @@ import it.gov.pagopa.print.payment.notice.functions.utils.Aes256Utils;
 import it.gov.pagopa.print.payment.notice.functions.utils.ObjectMapperUtils;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.function.Supplier;
+import java.util.function.BooleanSupplier;
 
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +30,8 @@ import org.springframework.stereotype.Service;
 @Service
 @Slf4j
 public class RetryService {
+    
+    private static final String MDC_MASSIVE_STATUS = "massiveStatus";
 
     @Value("${max_retry.on_error}")
     private int maxRetriesOnErrors;
@@ -88,15 +90,15 @@ public class RetryService {
 
 
         } catch (RetryEventPublicationException e) {
-            MDC.put("massiveStatus", "EXCEPTION");
+            MDC.put(MDC_MASSIVE_STATUS, "EXCEPTION");
             log.error("Retry Event Publication Error", e);
-            MDC.remove("massiveStatus");
+            MDC.remove(MDC_MASSIVE_STATUS);
             // The retry event could not be published; propagate the failure to the caller.
             throw e;
         } catch (Exception e) {
-            MDC.put("massiveStatus", "EXCEPTION");
+            MDC.put(MDC_MASSIVE_STATUS, "EXCEPTION");
             log.error("Retry Error", e);
-            MDC.remove("massiveStatus");
+            MDC.remove(MDC_MASSIVE_STATUS);
         }
     }
 
@@ -199,10 +201,10 @@ public class RetryService {
      * @param publisher operation used to publish the retry event
      * @throws RetryEventPublicationException if the retry event cannot be published
      */
-    private void publishRetryOrReleaseAttempt(PaymentNoticeGenerationRequestError error, Supplier<Boolean> publisher) {
+    private void publishRetryOrReleaseAttempt(PaymentNoticeGenerationRequestError error, BooleanSupplier publisher) {
         boolean sent;
         try {
-            sent = publisher.get();
+            sent = publisher.getAsBoolean();
         } catch (Exception e) {
 
             /*
