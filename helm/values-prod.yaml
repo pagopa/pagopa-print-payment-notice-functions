@@ -4,7 +4,7 @@ microservice-chart:
   fullnameOverride: "print-payment-notice-functions"
   image:
     repository: ghcr.io/pagopa/pagopa-print-payment-notice-functions
-    tag: "1.0.7"
+    tag: "1.0.7-1-PIDM-2413-completing-status-indefinitely"
     pullPolicy: Always
   livenessProbe:
     httpGet:
