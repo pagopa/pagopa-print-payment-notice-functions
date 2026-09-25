@@ -196,52 +196,66 @@ public class RetryService {
     /**
      * Publishes a retry event after a retry attempt has been acquired.
      *
-     * If publication fails, the previously acquired attempt is released so that a
-     * subsequent delivery can retry without consuming the configured limit.
+     * If publication fails, a compensating operation attempts to release the
+     * previously acquired retry slot. If compensation also fails, that failure is
+     * preserved as a suppressed exception on the original publication exception.
      *
      * @param error     persisted error containing the retry counter
      * @param publisher operation used to publish the retry event
      * @throws RetryEventPublicationException if the retry event cannot be published
      */
     private void publishRetryOrReleaseAttempt(PaymentNoticeGenerationRequestError error, BooleanSupplier publisher) {
+
         boolean sent;
+
         try {
             sent = publisher.getAsBoolean();
+
         } catch (Exception e) {
+
+            RetryEventPublicationException publicationException = new RetryEventPublicationException(e);
 
             /*
              * The retry event was not successfully published. Release the retry slot
              * acquired immediately before this operation.
              */
-            releaseRetryAttempt(error);
-            throw new RetryEventPublicationException(e);
+            releaseRetryAttempt(error, publicationException);
+            throw publicationException;
         }
+
         if (!sent) {
-            /*
-             * StreamBridge may report a failed send without throwing an exception. Release
-             * the acquired retry slot in this case as well.
-             */
-            releaseRetryAttempt(error);
-            throw new RetryEventPublicationException();
+
+            RetryEventPublicationException publicationException = new RetryEventPublicationException();
+
+            releaseRetryAttempt(error, publicationException);
+            throw publicationException;
         }
     }
     
     /*
      * Compensates a previously acquired retry attempt.
      */
-    private void releaseRetryAttempt(PaymentNoticeGenerationRequestError error) {
+    private void releaseRetryAttempt(PaymentNoticeGenerationRequestError error,
+            RetryEventPublicationException publicationException) {
+
         try {
             long updated = paymentGenerationRequestErrorRepository
                     .decrementNumberOfAttemptsIfGreaterThanZero(error.getId());
 
             if (updated == 0) {
-                log.error("Unable to release acquired retry attempt");
+                IllegalStateException compensationException = new IllegalStateException(
+                        "Unable to release acquired retry attempt for error: " + error.getId());
+
+                publicationException.addSuppressed(compensationException);
+
+                log.error("Unable to release acquired retry attempt for error {}", error.getId());
             } else {
                 log.debug("Released acquired retry attempt");
             }
 
-        } catch (Exception e) {
-            log.error("Unable to release acquired retry attempt", e);
+        } catch (Exception compensationException) {
+            publicationException.addSuppressed(compensationException);
+            log.error("Unable to release acquired retry attempt for error {}", error.getId(), compensationException);
         }
     }
 }

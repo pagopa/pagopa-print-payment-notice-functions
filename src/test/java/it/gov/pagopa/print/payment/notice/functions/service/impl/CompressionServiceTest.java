@@ -140,4 +140,38 @@ class CompressionServiceTest {
         assertThrows(RuntimeException.class, () -> compressionService.compressFolder(message));
         verify(noticeRequestErrorProducer).sendErrorEvent(any());
     }
+    
+    @Test
+    void compressFolderShouldSkipStaleCompletionEventWhenFolderIsAlreadyProcessed() throws IOException {
+
+        String folderId = "123456789";
+
+        var completionEvent = CompressionEvent.builder().id(folderId).status(PaymentGenerationRequestStatus.COMPLETING)
+                .userId("comune di roma").numberOfElementsFailed(0).numberOfElementsTotal(2).items(List.of("11", "22"))
+                .build();
+
+        /*
+         * The event still says COMPLETING, but Mongo is the source of truth and the
+         * folder has already been processed.
+         */
+        var persistedRequest = PaymentNoticeGenerationRequest.builder().id(folderId)
+                .status(PaymentGenerationRequestStatus.PROCESSED).userId("comune di roma").numberOfElementsFailed(0)
+                .numberOfElementsTotal(2).items(List.of("11", "22")).build();
+
+        when(paymentGenerationRequestRepository.findById(folderId)).thenReturn(Optional.of(persistedRequest));
+
+        var message = List.of(new ObjectMapper().writeValueAsString(completionEvent));
+
+        compressionService.compressFolder(message);
+
+        verify(paymentGenerationRequestRepository).findById(folderId);
+
+        verify(noticeStorageClient, never()).compressFolder(anyString());
+
+        verify(paymentGenerationRequestRepository, never()).updateStatusById(anyString(), any());
+
+        verify(paymentGenerationRequestErrorRepository, never()).deleteByFolderIdAndCompressionErrorTrue(anyString());
+
+        verifyNoInteractions(noticeRequestErrorProducer);
+    }
 }
