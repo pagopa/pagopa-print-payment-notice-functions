@@ -57,15 +57,22 @@ public class CompressionService {
             MDC.remove("action");
 
             try {
-                noticeFolderService.manageFolder(
-                        PaymentNoticeGenerationRequest.builder()
-                                .id(compressionMessage.getId())
-                                .userId(compressionMessage.getUserId())
-                                .numberOfElementsFailed(compressionMessage.getNumberOfElementsFailed())
-                                .numberOfElementsTotal(compressionMessage.getNumberOfElementsTotal())
-                                .items(compressionMessage.getItems())
-                                .status(compressionMessage.getStatus())
-                                .build());
+                /*
+                 * The completion event may be stale or duplicated. Re-read the folder from
+                 * Mongo before starting compression and use the persisted status as the source
+                 * of truth.
+                 */
+                PaymentNoticeGenerationRequest currentRequest = noticeFolderService
+                        .findRequest(compressionMessage.getId());
+
+                if (!PaymentGenerationRequestStatus.COMPLETING.equals(currentRequest.getStatus())) {
+                    log.info("Skipping compression because folder {} is no longer in COMPLETING status",
+                            compressionMessage.getId());
+                    return;
+                }
+
+                noticeFolderService.manageFolder(currentRequest);
+
             } catch (Exception e) {
                 var errorMsg = ErrorEvent.builder().folderId(compressionMessage.getId())
                         .errorId(compressionMessage.getId()).numberOfAttempts(0).compressionError(true).build();

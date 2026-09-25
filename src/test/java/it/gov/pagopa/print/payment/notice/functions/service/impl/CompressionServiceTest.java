@@ -2,6 +2,7 @@ package it.gov.pagopa.print.payment.notice.functions.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import it.gov.pagopa.print.payment.notice.functions.entity.PaymentGenerationRequestStatus;
+import it.gov.pagopa.print.payment.notice.functions.entity.PaymentNoticeGenerationRequest;
 import it.gov.pagopa.print.payment.notice.functions.events.model.CompressionEvent;
 import it.gov.pagopa.print.payment.notice.functions.events.producer.NoticeRequestErrorProducer;
 import it.gov.pagopa.print.payment.notice.functions.model.response.BlobStorageResponse;
@@ -17,6 +18,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -55,12 +57,20 @@ class CompressionServiceTest {
         when(mock.getStatusCode()).thenReturn(200);
 
         when(noticeStorageClient.compressFolder(folderId)).thenReturn(mock);
+        when(paymentGenerationRequestRepository.updateStatusById(folderId, PaymentGenerationRequestStatus.PROCESSED))
+                .thenReturn(1L);
 
         var elem = CompressionEvent.builder().id(folderId).status(PaymentGenerationRequestStatus.COMPLETING)
                 .userId("comune di roma").numberOfElementsFailed(0).numberOfElementsTotal(2).items(List.of("11", "22"))
                 .build();
 
         var message = List.of(new ObjectMapper().writeValueAsString(elem));
+
+        var persistedRequest = PaymentNoticeGenerationRequest.builder().id(folderId)
+                .status(PaymentGenerationRequestStatus.COMPLETING).userId("comune di roma").numberOfElementsFailed(0)
+                .numberOfElementsTotal(2).items(List.of("11", "22")).build();
+
+        when(paymentGenerationRequestRepository.findById(folderId)).thenReturn(Optional.of(persistedRequest));
 
         compressionService.compressFolder(message);
 
