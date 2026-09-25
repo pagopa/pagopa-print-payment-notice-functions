@@ -23,6 +23,8 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import java.util.List;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -399,24 +401,85 @@ class RetryServiceTest {
         when(paymentGenerationRequestErrorRepository
                 .findTopByFolderIdAndCompressionErrorTrueOrderByNumberOfAttemptsDesc("123456"))
                 .thenReturn(Optional.of(persistedError));
+
         when(paymentGenerationRequestRepository.findById("123456"))
                 .thenReturn(Optional.of(PaymentNoticeGenerationRequest.builder().id("123456").userId("user")
                         .status(PaymentGenerationRequestStatus.COMPLETING).items(List.of("1")).numberOfElementsFailed(0)
                         .numberOfElementsTotal(1).build()));
+
         when(paymentGenerationRequestErrorRepository.incrementNumberOfAttemptsIfBelowMax("compression-error-1", 3))
                 .thenReturn(1L);
+
         when(noticeRequestCompleteProducer.sendNoticeComplete(any())).thenReturn(false);
+
+        RuntimeException compensationFailure = new RuntimeException("Mongo unavailable");
+
         when(paymentGenerationRequestErrorRepository.decrementNumberOfAttemptsIfGreaterThanZero("compression-error-1"))
-                .thenThrow(new RuntimeException("Mongo unavailable"));
+                .thenThrow(compensationFailure);
 
         var event = ErrorEvent.builder().folderId("123456").errorId("123456").numberOfAttempts(0).compressionError(true)
                 .build();
 
         String message = new ObjectMapper().writeValueAsString(event);
 
-        assertThrows(RetryEventPublicationException.class, () -> retryService.retryError(message));
+        RetryEventPublicationException exception = assertThrows(RetryEventPublicationException.class,
+                () -> retryService.retryError(message));
+
+        assertEquals(1, exception.getSuppressed().length);
+        assertEquals(compensationFailure, exception.getSuppressed()[0]);
 
         verify(noticeRequestCompleteProducer).sendNoticeComplete(any());
+
+        verify(paymentGenerationRequestErrorRepository)
+                .decrementNumberOfAttemptsIfGreaterThanZero("compression-error-1");
+    }
+    
+    @Test
+    void retryCompressionShouldPreserveCompensationFailureWhenRetryAttemptCannotBeReleased()
+            throws JsonProcessingException {
+
+        var persistedError = PaymentNoticeGenerationRequestError.builder().id("compression-error-1").folderId("123456")
+                .errorId("123456").numberOfAttempts(0).compressionError(true).build();
+
+        when(paymentGenerationRequestErrorRepository
+                .findTopByFolderIdAndCompressionErrorTrueOrderByNumberOfAttemptsDesc("123456"))
+                .thenReturn(Optional.of(persistedError));
+
+        when(paymentGenerationRequestRepository.findById("123456"))
+                .thenReturn(Optional.of(PaymentNoticeGenerationRequest.builder().id("123456").userId("user")
+                        .status(PaymentGenerationRequestStatus.COMPLETING).items(List.of("1")).numberOfElementsFailed(0)
+                        .numberOfElementsTotal(1).build()));
+
+        when(paymentGenerationRequestErrorRepository.incrementNumberOfAttemptsIfBelowMax("compression-error-1", 3))
+                .thenReturn(1L);
+
+        when(noticeRequestCompleteProducer.sendNoticeComplete(any())).thenReturn(false);
+
+        /*
+         * The retry slot was acquired, but the compensating decrement does not update
+         * any document.
+         */
+        when(paymentGenerationRequestErrorRepository.decrementNumberOfAttemptsIfGreaterThanZero("compression-error-1"))
+                .thenReturn(0L);
+
+        var event = ErrorEvent.builder().folderId("123456").errorId("123456").numberOfAttempts(0).compressionError(true)
+                .build();
+
+        String message = new ObjectMapper().writeValueAsString(event);
+
+        RetryEventPublicationException exception = assertThrows(RetryEventPublicationException.class,
+                () -> retryService.retryError(message));
+
+        assertEquals(1, exception.getSuppressed().length);
+
+        IllegalStateException compensationFailure = assertInstanceOf(IllegalStateException.class,
+                exception.getSuppressed()[0]);
+
+        assertEquals("Unable to release acquired retry attempt for error: compression-error-1",
+                compensationFailure.getMessage());
+
+        verify(noticeRequestCompleteProducer).sendNoticeComplete(any());
+
         verify(paymentGenerationRequestErrorRepository)
                 .decrementNumberOfAttemptsIfGreaterThanZero("compression-error-1");
     }
