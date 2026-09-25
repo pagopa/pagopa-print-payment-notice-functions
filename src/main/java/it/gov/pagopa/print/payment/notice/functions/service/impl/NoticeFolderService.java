@@ -37,23 +37,30 @@ public class NoticeFolderService {
      * @param paymentNoticeGenerationRequest data to use as input for folder management
      * @throws SaveNoticeToBlobException
      */
-    public void manageFolder(PaymentNoticeGenerationRequest paymentNoticeGenerationRequest) throws SaveNoticeToBlobException, IOException {
+    public void manageFolder(PaymentNoticeGenerationRequest paymentNoticeGenerationRequest)
+            throws SaveNoticeToBlobException, IOException {
         var response = noticeStorageClient.compressFolder(paymentNoticeGenerationRequest.getId());
         if (response.getStatusCode() != HttpStatus.OK.value()) {
             throw new SaveNoticeToBlobException("Couldn't create the compressed file", response.getStatusCode());
         }
-        log.info("created compressed file {} for User {}", paymentNoticeGenerationRequest.getId(), paymentNoticeGenerationRequest.getUserId());
+        log.info("created compressed file {} for User {}", paymentNoticeGenerationRequest.getId(),
+                paymentNoticeGenerationRequest.getUserId());
 
-      
         PaymentGenerationRequestStatus finalStatus = paymentNoticeGenerationRequest.getNumberOfElementsFailed() != 0
                 ? PaymentGenerationRequestStatus.PROCESSED_WITH_FAILURES
                 : PaymentGenerationRequestStatus.PROCESSED;
 
         /*
-         * Update only the status field. 
-         * The Mongo document is shared with the other services and may contain fields not represented by this service model.
+         * Update only the status field. The Mongo document is shared with the other
+         * services and may contain fields not represented by this service model.
          */
-        paymentGenerationRequestRepository.updateStatusById(paymentNoticeGenerationRequest.getId(), finalStatus);
+        long updated = paymentGenerationRequestRepository.updateStatusById(paymentNoticeGenerationRequest.getId(),
+                finalStatus);
+
+        if (updated != 1) {
+            throw new IllegalStateException(
+                    "Unable to update massive request status for folder: " + paymentNoticeGenerationRequest.getId());
+        }
 
         paymentNoticeGenerationRequest.setStatus(finalStatus);
 
@@ -61,9 +68,10 @@ public class NoticeFolderService {
          * A successful compression makes previous compression errors obsolete.
          */
         deleteCompressionErrors(paymentNoticeGenerationRequest.getId());
-        
+
         MDC.put("massiveStatus", paymentNoticeGenerationRequest.getStatus().toString());
-        log.info("Massive Request {} [user {}]", paymentNoticeGenerationRequest.getStatus(), paymentNoticeGenerationRequest.getUserId());
+        log.info("Massive Request {} [user {}]", paymentNoticeGenerationRequest.getStatus(),
+                paymentNoticeGenerationRequest.getUserId());
         MDC.remove("massiveStatus");
     }
 

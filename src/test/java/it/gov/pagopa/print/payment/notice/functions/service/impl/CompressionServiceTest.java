@@ -55,6 +55,8 @@ class CompressionServiceTest {
         when(mock.getStatusCode()).thenReturn(200);
 
         when(noticeStorageClient.compressFolder(folderId)).thenReturn(mock);
+        when(paymentGenerationRequestRepository.updateStatusById(folderId, PaymentGenerationRequestStatus.PROCESSED))
+                .thenReturn(1L);
 
         var elem = CompressionEvent.builder().id(folderId).status(PaymentGenerationRequestStatus.COMPLETING)
                 .userId("comune di roma").numberOfElementsFailed(0).numberOfElementsTotal(2).items(List.of("11", "22"))
