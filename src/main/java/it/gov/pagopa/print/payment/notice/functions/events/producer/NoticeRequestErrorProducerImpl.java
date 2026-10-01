@@ -18,6 +18,9 @@ import java.util.function.Supplier;
 @Service
 @Slf4j
 public class NoticeRequestErrorProducerImpl implements NoticeRequestErrorProducer {
+    
+    private static final String MDC_TOPIC = "topic";
+    private static final String MDC_ACTION = "action";
 
     @Autowired
     private StreamBridge streamBridge;
@@ -28,15 +31,21 @@ public class NoticeRequestErrorProducerImpl implements NoticeRequestErrorProduce
     }
 
     @Override
-    public boolean sendErrorEvent(ErrorEvent paymentNoticeGenerationRequestError) {
-        var res = streamBridge.send("noticeError-out-0",
-                buildMessage(paymentNoticeGenerationRequestError));
+    public boolean sendErrorEvent(ErrorEvent errorEvent) {
+        var res = streamBridge.send("noticeError-out-0", buildMessage(errorEvent));
 
-        MDC.put("topic", "complete");
-        MDC.put("action", "sent");
-        log.info("Complete Message Retry Sent");
-        MDC.remove("topic");
-        MDC.remove("action");
+        MDC.put(MDC_TOPIC, "error");
+
+        if (res) {
+            MDC.put(MDC_ACTION, "sent");
+            log.info("Error Message Sent");
+        } else {
+            MDC.put(MDC_ACTION, "failed");
+            log.error("Unable to send Error Message");
+        }
+
+        MDC.remove(MDC_TOPIC);
+        MDC.remove(MDC_ACTION);
 
         return res;
     }
