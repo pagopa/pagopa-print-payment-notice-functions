@@ -111,7 +111,7 @@ jobs:
           github_token: ${{ secrets.BOT_TOKEN_GITHUB }}
           beta: ${{ inputs.beta }}
           skip_ci: true
-          prerelease: ${{ needs.setup.outputs.environment != 'prod' }}
+          prerelease: ${{ needs.setup.outputs.semver == 'buildNumber' }}
 
   image:
     needs: [ setup, release ]
